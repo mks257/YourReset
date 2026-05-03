@@ -12,6 +12,7 @@
 
 import { useRef, useEffect } from "react";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
+import { MathUtils } from "three";
 
 // ── Camera presets per animation category ────────────────────────────────
 // pos: camera world position  target: lookAt point
@@ -220,117 +221,119 @@ const DRIVERS = {
   },
 };
 
-function set(ref, axis, val) {
-  if (ref?.current) ref.current.rotation[axis] = val;
+// Lerp rotation toward target — gives organic body-weight feel
+// factor ~0.13 ≈ 160ms settle at 60fps, which reads as natural inertia
+function set(ref, axis, target, factor = 0.13) {
+  if (ref?.current) {
+    ref.current.rotation[axis] = MathUtils.lerp(
+      ref.current.rotation[axis],
+      target,
+      factor
+    );
+  }
 }
 
-// ── Mannequin ─────────────────────────────────────────────────────────────
+// ── Reusable mesh primitives ──────────────────────────────────────────────
+function Seg({ r, h, mat }) {     // capsule segment
+  return <mesh><capsuleGeometry args={[r, h, 6, 14]} /><meshStandardMaterial {...mat} /></mesh>;
+}
+function Ball({ r, mat, pos }) {   // joint sphere
+  return <mesh position={pos}><sphereGeometry args={[r, 14, 14]} /><meshStandardMaterial {...mat} /></mesh>;
+}
+function Foot({ mat }) {           // flattened foot block
+  return (
+    <mesh position={[0, -0.04, 0.04]}>
+      <boxGeometry args={[0.08, 0.05, 0.14]} />
+      <meshStandardMaterial {...mat} />
+    </mesh>
+  );
+}
+
+// ── Mannequin — improved clay figure with joint spheres ───────────────────
+// Drop this component for a GLB-based version once a model file is available.
+// Everything above (DRIVERS, CAMERA_PRESETS, ANIM_MAP) remains unchanged.
 function Mannequin({ animKey, color }) {
-  // Joint refs
-  const root      = useRef(), spine     = useRef(), chest     = useRef();
-  const neck      = useRef(), head      = useRef();
+  const root      = useRef(), spine = useRef(), chest = useRef();
   const lShoulder = useRef(), rShoulder = useRef();
   const lElbow    = useRef(), rElbow    = useRef();
-  const pelvis    = useRef();
   const lHip      = useRef(), rHip      = useRef();
   const lKnee     = useRef(), rKnee     = useRef();
 
-  const refs = { root, spine, chest, neck, lShoulder, rShoulder, lElbow, rElbow, pelvis, lHip, rHip, lKnee, rKnee };
-
+  const refs = { root, spine, chest, lShoulder, rShoulder, lElbow, rElbow, lHip, rHip, lKnee, rKnee };
   const driver = DRIVERS[animKey] || DRIVERS.idle;
-  const speed  = 1.8;
 
-  useFrame(({ clock }) => driver(clock.getElapsedTime() * speed, refs));
+  useFrame(({ clock }) => driver(clock.getElapsedTime() * 1.8, refs));
 
-  const mat = { color, roughness: 0.82, metalness: 0.05 };
-  const jt  = { color: "#ffffff", roughness: 0.9 };  // joint caps slightly lighter
+  // Clay-style material — body segments and joint balls share hue, joints slightly lighter
+  const body  = { color, roughness: 0.80, metalness: 0.04 };
+  const joint = { color, roughness: 0.65, metalness: 0.12 }; // subtle sheen on ball joints
 
   return (
-    <group ref={root} position={[0, 0, 0]}>
-      {/* ── Pelvis ── */}
-      <group ref={pelvis} position={[0, 0.82, 0]}>
-        <mesh>
-          <capsuleGeometry args={[0.11, 0.14, 6, 12]} />
-          <meshStandardMaterial {...mat} />
-        </mesh>
+    <group ref={root}>
+
+      {/* ── Pelvis block ── */}
+      <group position={[0, 0.80, 0]}>
+        <Seg r={0.115} h={0.12} mat={body} />
 
         {/* ── Left leg ── */}
-        <group ref={lHip} position={[-0.13, -0.02, 0]}>
-          <mesh position={[0, -0.2, 0]}>
-            <capsuleGeometry args={[0.07, 0.26, 6, 12]} />
-            <meshStandardMaterial {...mat} />
-          </mesh>
-          <group ref={lKnee} position={[0, -0.38, 0]}>
-            <mesh position={[0, -0.17, 0]}>
-              <capsuleGeometry args={[0.055, 0.22, 6, 12]} />
-              <meshStandardMaterial {...mat} />
-            </mesh>
+        <group ref={lHip} position={[-0.125, -0.04, 0]}>
+          <Ball r={0.075} mat={joint} pos={[0, 0, 0]} />      {/* hip ball */}
+          <mesh position={[0, -0.19, 0]}><capsuleGeometry args={[0.068, 0.22, 6, 14]} /><meshStandardMaterial {...body} /></mesh>
+          <group ref={lKnee} position={[0, -0.37, 0]}>
+            <Ball r={0.065} mat={joint} pos={[0, 0, 0]} />    {/* knee ball */}
+            <mesh position={[0, -0.18, 0]}><capsuleGeometry args={[0.054, 0.22, 6, 14]} /><meshStandardMaterial {...body} /></mesh>
+            <group position={[0, -0.36, 0]}><Foot mat={body} /></group>
           </group>
         </group>
 
         {/* ── Right leg ── */}
-        <group ref={rHip} position={[0.13, -0.02, 0]}>
-          <mesh position={[0, -0.2, 0]}>
-            <capsuleGeometry args={[0.07, 0.26, 6, 12]} />
-            <meshStandardMaterial {...mat} />
-          </mesh>
-          <group ref={rKnee} position={[0, -0.38, 0]}>
-            <mesh position={[0, -0.17, 0]}>
-              <capsuleGeometry args={[0.055, 0.22, 6, 12]} />
-              <meshStandardMaterial {...mat} />
-            </mesh>
+        <group ref={rHip} position={[0.125, -0.04, 0]}>
+          <Ball r={0.075} mat={joint} pos={[0, 0, 0]} />
+          <mesh position={[0, -0.19, 0]}><capsuleGeometry args={[0.068, 0.22, 6, 14]} /><meshStandardMaterial {...body} /></mesh>
+          <group ref={rKnee} position={[0, -0.37, 0]}>
+            <Ball r={0.065} mat={joint} pos={[0, 0, 0]} />
+            <mesh position={[0, -0.18, 0]}><capsuleGeometry args={[0.054, 0.22, 6, 14]} /><meshStandardMaterial {...body} /></mesh>
+            <group position={[0, -0.36, 0]}><Foot mat={body} /></group>
           </group>
         </group>
       </group>
 
       {/* ── Spine ── */}
-      <group ref={spine} position={[0, 0.96, 0]}>
-        <group ref={chest} position={[0, 0.22, 0]}>
-          {/* Torso */}
-          <mesh position={[0, 0, 0]}>
-            <capsuleGeometry args={[0.13, 0.36, 6, 12]} />
-            <meshStandardMaterial {...mat} />
-          </mesh>
+      <group ref={spine} position={[0, 0.94, 0]}>
+        {/* Abdomen */}
+        <mesh position={[0, 0.08, 0]}><capsuleGeometry args={[0.11, 0.16, 6, 14]} /><meshStandardMaterial {...body} /></mesh>
+
+        <group ref={chest} position={[0, 0.25, 0]}>
+          {/* Upper torso — slightly wider than abdomen */}
+          <mesh position={[0, 0.08, 0]}><capsuleGeometry args={[0.135, 0.22, 6, 14]} /><meshStandardMaterial {...body} /></mesh>
 
           {/* ── Neck + Head ── */}
-          <group ref={neck} position={[0, 0.28, 0]}>
-            <mesh position={[0, 0.05, 0]}>
-              <capsuleGeometry args={[0.044, 0.07, 6, 12]} />
-              <meshStandardMaterial {...jt} />
-            </mesh>
-            <group ref={head} position={[0, 0.13, 0]}>
-              <mesh>
-                <sphereGeometry args={[0.12, 16, 16]} />
-                <meshStandardMaterial {...mat} />
-              </mesh>
-            </group>
+          <group position={[0, 0.26, 0]}>
+            <mesh position={[0, 0.04, 0]}><capsuleGeometry args={[0.042, 0.06, 6, 12]} /><meshStandardMaterial {...body} /></mesh>
+            {/* Head */}
+            <mesh position={[0, 0.17, 0]}><sphereGeometry args={[0.115, 16, 16]} /><meshStandardMaterial {...body} /></mesh>
           </group>
 
           {/* ── Left arm ── */}
-          <group ref={lShoulder} position={[-0.21, 0.16, 0]}>
-            <mesh position={[0, -0.15, 0]}>
-              <capsuleGeometry args={[0.053, 0.2, 6, 12]} />
-              <meshStandardMaterial {...mat} />
-            </mesh>
-            <group ref={lElbow} position={[0, -0.29, 0]}>
-              <mesh position={[0, -0.12, 0]}>
-                <capsuleGeometry args={[0.042, 0.16, 6, 12]} />
-                <meshStandardMaterial {...mat} />
-              </mesh>
+          <group ref={lShoulder} position={[-0.215, 0.18, 0]}>
+            <Ball r={0.068} mat={joint} pos={[0, 0, 0]} />   {/* shoulder ball */}
+            <mesh position={[0, -0.14, 0]}><capsuleGeometry args={[0.052, 0.19, 6, 14]} /><meshStandardMaterial {...body} /></mesh>
+            <group ref={lElbow} position={[0, -0.28, 0]}>
+              <Ball r={0.055} mat={joint} pos={[0, 0, 0]} /> {/* elbow ball */}
+              <mesh position={[0, -0.12, 0]}><capsuleGeometry args={[0.042, 0.16, 6, 14]} /><meshStandardMaterial {...body} /></mesh>
+              {/* Wrist + hand */}
+              <Ball r={0.04} mat={joint} pos={[0, -0.22, 0]} />
             </group>
           </group>
 
           {/* ── Right arm ── */}
-          <group ref={rShoulder} position={[0.21, 0.16, 0]}>
-            <mesh position={[0, -0.15, 0]}>
-              <capsuleGeometry args={[0.053, 0.2, 6, 12]} />
-              <meshStandardMaterial {...mat} />
-            </mesh>
-            <group ref={rElbow} position={[0, -0.29, 0]}>
-              <mesh position={[0, -0.12, 0]}>
-                <capsuleGeometry args={[0.042, 0.16, 6, 12]} />
-                <meshStandardMaterial {...mat} />
-              </mesh>
+          <group ref={rShoulder} position={[0.215, 0.18, 0]}>
+            <Ball r={0.068} mat={joint} pos={[0, 0, 0]} />
+            <mesh position={[0, -0.14, 0]}><capsuleGeometry args={[0.052, 0.19, 6, 14]} /><meshStandardMaterial {...body} /></mesh>
+            <group ref={rElbow} position={[0, -0.28, 0]}>
+              <Ball r={0.055} mat={joint} pos={[0, 0, 0]} />
+              <mesh position={[0, -0.12, 0]}><capsuleGeometry args={[0.042, 0.16, 6, 14]} /><meshStandardMaterial {...body} /></mesh>
+              <Ball r={0.04} mat={joint} pos={[0, -0.22, 0]} />
             </group>
           </group>
         </group>
