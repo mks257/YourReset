@@ -233,109 +233,167 @@ function set(ref, axis, target, factor = 0.13) {
   }
 }
 
-// ── Reusable mesh primitives ──────────────────────────────────────────────
-function Seg({ r, h, mat }) {     // capsule segment
-  return <mesh><capsuleGeometry args={[r, h, 6, 14]} /><meshStandardMaterial {...mat} /></mesh>;
-}
-function Ball({ r, mat, pos }) {   // joint sphere
-  return <mesh position={pos}><sphereGeometry args={[r, 14, 14]} /><meshStandardMaterial {...mat} /></mesh>;
-}
-function Foot({ mat }) {           // flattened foot block
+// ── Material palette ─────────────────────────────────────────────────────
+const SKIN  = { color: "#c8906a", roughness: 0.88, metalness: 0 };
+const SHOE  = { color: "#e8e8e6", roughness: 0.82, metalness: 0.04 };
+const DARK  = { color: "#16182a", roughness: 0.78, metalness: 0.06 }; // dark gymwear
+const HAIR_F = { color: "#1e120a", roughness: 0.92, metalness: 0 };   // deep brown
+const HAIR_M = { color: "#141010", roughness: 0.92, metalness: 0 };   // near black
+
+// ── Mesh helpers ──────────────────────────────────────────────────────────
+function C({ r, h, mat })       { return <mesh><capsuleGeometry args={[r, h, 6, 14]} /><meshStandardMaterial {...mat} /></mesh>; }
+function S({ r, mat, pos = [0,0,0] }) { return <mesh position={pos}><sphereGeometry args={[r, 14, 14]} /><meshStandardMaterial {...mat} /></mesh>; }
+function Shoe({ mat }) {
   return (
-    <mesh position={[0, -0.04, 0.04]}>
-      <boxGeometry args={[0.08, 0.05, 0.14]} />
-      <meshStandardMaterial {...mat} />
+    <group>
+      <mesh position={[0, -0.04, 0.02]}><boxGeometry args={[0.08, 0.045, 0.15]} /><meshStandardMaterial {...mat} /></mesh>
+    </group>
+  );
+}
+
+// Female hair: sphere cap + swept ponytail
+function FemaleHair({ hr }) {
+  return (
+    <group>
+      <mesh position={[0, hr * 0.28, 0]}>
+        <sphereGeometry args={[hr * 0.9, 14, 14, 0, Math.PI * 2, 0, Math.PI * 0.52]} />
+        <meshStandardMaterial {...HAIR_F} />
+      </mesh>
+      {/* Ponytail anchor */}
+      <S r={hr * 0.22} mat={HAIR_F} pos={[0, hr * 0.58, -hr * 0.72]} />
+      {/* Ponytail sweep */}
+      <mesh position={[0, hr * 0.2, -hr * 1.15]} rotation={[0.45, 0, 0]}>
+        <capsuleGeometry args={[hr * 0.13, hr * 1.3, 6, 10]} />
+        <meshStandardMaterial {...HAIR_F} />
+      </mesh>
+    </group>
+  );
+}
+
+// Male hair: tight hemisphere cap
+function MaleHair({ hr }) {
+  return (
+    <mesh position={[0, hr * 0.32, 0]}>
+      <sphereGeometry args={[hr * 0.85, 14, 14, 0, Math.PI * 2, 0, Math.PI * 0.44]} />
+      <meshStandardMaterial {...HAIR_M} />
     </mesh>
   );
 }
 
-// ── Mannequin — improved clay figure with joint spheres ───────────────────
-// Drop this component for a GLB-based version once a model file is available.
-// Everything above (DRIVERS, CAMERA_PRESETS, ANIM_MAP) remains unchanged.
-function Mannequin({ animKey, color }) {
-  const root      = useRef(), spine = useRef(), chest = useRef();
+// ── Gender-aware Mannequin ────────────────────────────────────────────────
+// Swap only this component for a GLB/VRM when the model file is ready.
+// All animation drivers, camera presets, and lazy-loading stay unchanged.
+function Mannequin({ animKey, accent, gender = "female" }) {
+  const root = useRef(), spine = useRef(), chest = useRef();
   const lShoulder = useRef(), rShoulder = useRef();
   const lElbow    = useRef(), rElbow    = useRef();
   const lHip      = useRef(), rHip      = useRef();
   const lKnee     = useRef(), rKnee     = useRef();
 
   const refs = { root, spine, chest, lShoulder, rShoulder, lElbow, rElbow, lHip, rHip, lKnee, rKnee };
-  const driver = DRIVERS[animKey] || DRIVERS.idle;
+  useFrame(({ clock }) => (DRIVERS[animKey] || DRIVERS.idle)(clock.getElapsedTime() * 1.8, refs));
 
-  useFrame(({ clock }) => driver(clock.getElapsedTime() * 1.8, refs));
+  const isFemale = gender !== "male";
 
-  // Clay-style material — body segments and joint balls share hue, joints slightly lighter
-  const body  = { color, roughness: 0.80, metalness: 0.04 };
-  const joint = { color, roughness: 0.65, metalness: 0.12 }; // subtle sheen on ball joints
+  // Phase accent as sports bra / outfit trim colour (female) or ignored (male dark outfit)
+  const TOP  = isFemale
+    ? { color: accent, roughness: 0.72, metalness: 0.08 }   // sports bra = phase accent
+    : DARK;                                                   // tank = dark
+
+  const JOINT = isFemale
+    ? { color: accent, roughness: 0.55, metalness: 0.18 }    // glowing joints for female
+    : { color: "#222238", roughness: 0.6, metalness: 0.12 }; // dark joints for male
+
+  // Proportions — female: narrower shoulders, wider hips, slimmer arms
+  //               male:   wider shoulders, narrower hips, heavier build
+  const p = isFemale ? {
+    sw: 0.185, hw: 0.128, tw: 0.116, aw: 0.105, pelR: 0.112,
+    armR: 0.046, foreR: 0.038, thighR: 0.065, shinR: 0.051, hr: 0.105,
+  } : {
+    sw: 0.225, hw: 0.112, tw: 0.135, aw: 0.118, pelR: 0.106,
+    armR: 0.059, foreR: 0.048, thighR: 0.075, shinR: 0.062, hr: 0.116,
+  };
 
   return (
     <group ref={root}>
 
-      {/* ── Pelvis block ── */}
+      {/* ── Hips / pelvis ── */}
       <group position={[0, 0.80, 0]}>
-        <Seg r={0.115} h={0.12} mat={body} />
+        <C r={p.pelR} h={0.12} mat={DARK} />
 
-        {/* ── Left leg ── */}
-        <group ref={lHip} position={[-0.125, -0.04, 0]}>
-          <Ball r={0.075} mat={joint} pos={[0, 0, 0]} />      {/* hip ball */}
-          <mesh position={[0, -0.19, 0]}><capsuleGeometry args={[0.068, 0.22, 6, 14]} /><meshStandardMaterial {...body} /></mesh>
-          <group ref={lKnee} position={[0, -0.37, 0]}>
-            <Ball r={0.065} mat={joint} pos={[0, 0, 0]} />    {/* knee ball */}
-            <mesh position={[0, -0.18, 0]}><capsuleGeometry args={[0.054, 0.22, 6, 14]} /><meshStandardMaterial {...body} /></mesh>
-            <group position={[0, -0.36, 0]}><Foot mat={body} /></group>
+        {[[-1, lHip, lKnee], [1, rHip, rKnee]].map(([side, hipRef, kneeRef]) => (
+          <group key={side} ref={hipRef} position={[side * p.hw, -0.04, 0]}>
+            <S r={0.072} mat={JOINT} />
+            {/* Thigh */}
+            <mesh position={[0, -0.19, 0]}>
+              <capsuleGeometry args={[p.thighR, 0.23, 6, 14]} />
+              <meshStandardMaterial {...DARK} />
+            </mesh>
+            <group ref={kneeRef} position={[0, -0.38, 0]}>
+              <S r={0.062} mat={JOINT} />
+              {/* Shin */}
+              <mesh position={[0, -0.18, 0]}>
+                <capsuleGeometry args={[p.shinR, 0.22, 6, 14]} />
+                {/* Female: leggings all the way. Male: bare shins below shorts */}
+                <meshStandardMaterial {...(isFemale ? DARK : SKIN)} />
+              </mesh>
+              {/* Shoe */}
+              <group position={[0, -0.36, 0]}><Shoe mat={SHOE} /></group>
+            </group>
           </group>
-        </group>
-
-        {/* ── Right leg ── */}
-        <group ref={rHip} position={[0.125, -0.04, 0]}>
-          <Ball r={0.075} mat={joint} pos={[0, 0, 0]} />
-          <mesh position={[0, -0.19, 0]}><capsuleGeometry args={[0.068, 0.22, 6, 14]} /><meshStandardMaterial {...body} /></mesh>
-          <group ref={rKnee} position={[0, -0.37, 0]}>
-            <Ball r={0.065} mat={joint} pos={[0, 0, 0]} />
-            <mesh position={[0, -0.18, 0]}><capsuleGeometry args={[0.054, 0.22, 6, 14]} /><meshStandardMaterial {...body} /></mesh>
-            <group position={[0, -0.36, 0]}><Foot mat={body} /></group>
-          </group>
-        </group>
+        ))}
       </group>
 
       {/* ── Spine ── */}
       <group ref={spine} position={[0, 0.94, 0]}>
-        {/* Abdomen */}
-        <mesh position={[0, 0.08, 0]}><capsuleGeometry args={[0.11, 0.16, 6, 14]} /><meshStandardMaterial {...body} /></mesh>
+        {/* Abdomen — female shows midriff skin, male has tank covering it */}
+        <mesh position={[0, 0.08, 0]}>
+          <capsuleGeometry args={[p.aw, 0.16, 6, 14]} />
+          <meshStandardMaterial {...(isFemale ? SKIN : DARK)} />
+        </mesh>
 
-        <group ref={chest} position={[0, 0.25, 0]}>
-          {/* Upper torso — slightly wider than abdomen */}
-          <mesh position={[0, 0.08, 0]}><capsuleGeometry args={[0.135, 0.22, 6, 14]} /><meshStandardMaterial {...body} /></mesh>
+        <group ref={chest} position={[0, 0.27, 0]}>
+          {/* Upper torso */}
+          <mesh position={[0, 0.07, 0]}>
+            <capsuleGeometry args={[p.tw, 0.21, 6, 14]} />
+            <meshStandardMaterial {...TOP} />
+          </mesh>
 
-          {/* ── Neck + Head ── */}
-          <group position={[0, 0.26, 0]}>
-            <mesh position={[0, 0.04, 0]}><capsuleGeometry args={[0.042, 0.06, 6, 12]} /><meshStandardMaterial {...body} /></mesh>
-            {/* Head */}
-            <mesh position={[0, 0.17, 0]}><sphereGeometry args={[0.115, 16, 16]} /><meshStandardMaterial {...body} /></mesh>
+          {/* Neck */}
+          <mesh position={[0, 0.29, 0.01]}>
+            <capsuleGeometry args={[0.042, 0.06, 6, 12]} />
+            <meshStandardMaterial {...SKIN} />
+          </mesh>
+
+          {/* Head */}
+          <group position={[0, 0.44, 0]}>
+            <mesh>
+              <sphereGeometry args={[p.hr, 16, 16]} />
+              <meshStandardMaterial {...SKIN} />
+            </mesh>
+            {isFemale ? <FemaleHair hr={p.hr} /> : <MaleHair hr={p.hr} />}
           </group>
 
-          {/* ── Left arm ── */}
-          <group ref={lShoulder} position={[-0.215, 0.18, 0]}>
-            <Ball r={0.068} mat={joint} pos={[0, 0, 0]} />   {/* shoulder ball */}
-            <mesh position={[0, -0.14, 0]}><capsuleGeometry args={[0.052, 0.19, 6, 14]} /><meshStandardMaterial {...body} /></mesh>
-            <group ref={lElbow} position={[0, -0.28, 0]}>
-              <Ball r={0.055} mat={joint} pos={[0, 0, 0]} /> {/* elbow ball */}
-              <mesh position={[0, -0.12, 0]}><capsuleGeometry args={[0.042, 0.16, 6, 14]} /><meshStandardMaterial {...body} /></mesh>
-              {/* Wrist + hand */}
-              <Ball r={0.04} mat={joint} pos={[0, -0.22, 0]} />
+          {/* Arms */}
+          {[[-1, lShoulder, lElbow], [1, rShoulder, rElbow]].map(([side, shouldRef, elbowRef]) => (
+            <group key={side} ref={shouldRef} position={[side * p.sw, 0.17, 0]}>
+              <S r={0.065} mat={JOINT} />
+              {/* Upper arm */}
+              <mesh position={[0, -0.14, 0]}>
+                <capsuleGeometry args={[p.armR, 0.19, 6, 14]} />
+                <meshStandardMaterial {...SKIN} />
+              </mesh>
+              <group ref={elbowRef} position={[0, -0.28, 0]}>
+                <S r={0.050} mat={JOINT} />
+                {/* Forearm */}
+                <mesh position={[0, -0.12, 0]}>
+                  <capsuleGeometry args={[p.foreR, 0.16, 6, 14]} />
+                  <meshStandardMaterial {...SKIN} />
+                </mesh>
+                <S r={0.038} mat={JOINT} pos={[0, -0.22, 0]} />
+              </group>
             </group>
-          </group>
-
-          {/* ── Right arm ── */}
-          <group ref={rShoulder} position={[0.215, 0.18, 0]}>
-            <Ball r={0.068} mat={joint} pos={[0, 0, 0]} />
-            <mesh position={[0, -0.14, 0]}><capsuleGeometry args={[0.052, 0.19, 6, 14]} /><meshStandardMaterial {...body} /></mesh>
-            <group ref={rElbow} position={[0, -0.28, 0]}>
-              <Ball r={0.055} mat={joint} pos={[0, 0, 0]} />
-              <mesh position={[0, -0.12, 0]}><capsuleGeometry args={[0.042, 0.16, 6, 14]} /><meshStandardMaterial {...body} /></mesh>
-              <Ball r={0.04} mat={joint} pos={[0, -0.22, 0]} />
-            </group>
-          </group>
+          ))}
         </group>
       </group>
     </group>
@@ -343,7 +401,7 @@ function Mannequin({ animKey, color }) {
 }
 
 // ── Public component ──────────────────────────────────────────────────────
-export default function Exercise3DPreview({ type = "idle", color = "#9bd8b4", height = 220 }) {
+export default function Exercise3DPreview({ type = "idle", color = "#9bd8b4", height = 220, gender = "female" }) {
   const animKey = ANIM_MAP[type] || "idle";
 
   return (
@@ -354,11 +412,16 @@ export default function Exercise3DPreview({ type = "idle", color = "#9bd8b4", he
         gl={{ antialias: true, alpha: true }}
       >
         <CameraAim animKey={animKey} />
-        <ambientLight intensity={0.6} />
-        <directionalLight position={[2.5, 5, 2.5]} intensity={0.9} castShadow={false} />
-        <pointLight position={[-2, 2.5, -1]} intensity={0.35} color="#b79cff" />
-        <pointLight position={[0, 3.5, 1.5]} intensity={0.25} color={color} />
-        <Mannequin animKey={animKey} color={color} />
+
+        {/* Studio lighting — neutral fill + phase accent rim */}
+        <ambientLight intensity={0.55} />
+        <directionalLight position={[2.5, 5, 2]} intensity={0.95} castShadow={false} />
+        <directionalLight position={[-2, 3, -1]} intensity={0.3} color="#c8b0ff" />
+
+        {/* Phase accent rim light — wraps the figure in the current phase colour */}
+        <pointLight position={[-1.8, 2.5, -1.2]} intensity={1.2} color={color} distance={4} />
+
+        <Mannequin animKey={animKey} accent={color} gender={gender} />
       </Canvas>
     </div>
   );

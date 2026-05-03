@@ -47,7 +47,7 @@ export default function PlanTab({
   day, selectedDay, setSelectedDay, done, setDone, setModal,
   readiness, showReadiness, setReadiness, setShowReadiness,
   cycleState, profile, weekKey, theme, phaseCopy,
-  swapped = {}, onSwap, onUndoSwap,
+  swapped = {}, onSwap, onUndoSwap, gender = "female",
 }) {
   const doneCount  = day.exercises.filter(e => done[`${selectedDay}-${e.id}`]).length;
   const totalKcal  = day.exercises.reduce((a, e) => a + e.kcal, 0);
@@ -90,7 +90,7 @@ export default function PlanTab({
         {/* 3D avatar — lazy so Three.js only loads after first interaction */}
         <div className="avatar-preview" style={{ overflow:"hidden", borderRadius:20 }}>
           <Suspense fallback={<AvatarSkeleton color={theme.accent} />}>
-            <Exercise3DPreview type={avatarEx.anim} color={theme.accent} height={200} />
+            <Exercise3DPreview type={avatarEx.anim} color={theme.accent} height={200} gender={gender} />
           </Suspense>
         </div>
       </section>

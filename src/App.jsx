@@ -127,6 +127,7 @@ export default function App() {
             setReadiness={setReadiness} setShowReadiness={setShowReadiness}
             cycleState={cycleState} profile={profile} weekKey={weekKey}
             theme={theme} phaseCopy={phaseCopy} liveData={liveData}
+            gender={profile?.gender || "female"}
             swapped={swapped}
             onSwap={(exId) => {
               const hasBands = (profile?.equipment || []).includes("bands");
@@ -162,8 +163,6 @@ export default function App() {
 
       {/* ── Exercise modal ── */}
       {modal && (() => {
-        // _doneKey is set by PlanTab to always use the original exercise's slot key,
-        // even when the modal displays a swapped exercise. Falls back to modal.id for safety.
         const doneKey = modal._doneKey || `${selectedDay}-${modal.id}`;
         return (
           <ExerciseModal
@@ -172,6 +171,7 @@ export default function App() {
             isDone={!!done[doneKey]}
             onToggleDone={() => setDone(p => ({ ...p, [doneKey]: !p[doneKey] }))}
             selectedDay={selectedDay} weekKey={weekKey} phaseNote={phaseNote}
+            gender={profile?.gender || "female"}
           />
         );
       })()}

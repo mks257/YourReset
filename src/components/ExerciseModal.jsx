@@ -28,7 +28,7 @@ function AvatarSkeleton({ color, height }) {
 // Cache key per exercise — avoids re-generating on every modal open
 const videoCacheKey = (exId) => `hf_vid_${exId}`;
 
-function ExerciseModal({ ex, dayColor, onClose, onToggleDone, isDone, selectedDay, weekKey, phaseNote }) {
+function ExerciseModal({ ex, dayColor, onClose, onToggleDone, isDone, selectedDay, weekKey, phaseNote, gender = "female" }) {
   // Check localStorage for a cached URL before going idle
   const cachedUrl = Storage.get(videoCacheKey(ex.id), null);
 
@@ -112,7 +112,7 @@ function ExerciseModal({ ex, dayColor, onClose, onToggleDone, isDone, selectedDa
         {/* 3D avatar — lazy-loaded so Three.js doesn't block initial render */}
         <Suspense fallback={<AvatarSkeleton color={dayColor} height={230} />}>
           <div style={{ marginBottom: 16, borderRadius: 16, overflow: "hidden", background: `${dayColor}08` }}>
-            <Exercise3DPreview type={ex.anim} color={dayColor} height={230} />
+            <Exercise3DPreview type={ex.anim} color={dayColor} height={230} gender={gender} />
           </div>
         </Suspense>
 
