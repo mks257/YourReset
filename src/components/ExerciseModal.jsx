@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { createVideoGeneration, pollGeneration, extractVideoUrl } from "../higgsfieldApi";
-import ExerciseAnimation from "./ExerciseAnimation";
+import Exercise3DPreview from "./Exercise3DPreview";
+import ExerciseAnimation from "./ExerciseAnimation"; // kept as fallback
 import WorkoutLogger from "./WorkoutLogger";
 import { T } from "../theme";
 import * as Storage from "../storage";
@@ -89,8 +90,9 @@ function ExerciseModal({ ex, dayColor, onClose, onToggleDone, isDone, selectedDa
           color:T.muted, fontSize:"1rem", display:"flex", alignItems:"center", justifyContent:"center"
         }}>✕</button>
 
-        <div style={{ display:"flex", justifyContent:"center", marginBottom:20, background:`${dayColor}0a`, borderRadius:16, padding:"12px 0" }}>
-          <ExerciseAnimation type={ex.anim} color={dayColor} />
+        {/* 3D avatar preview — replaces stick figure */}
+        <div style={{ marginBottom: 16, borderRadius: 16, overflow: "hidden", background: `${dayColor}08` }}>
+          <Exercise3DPreview type={ex.anim} color={dayColor} height={230} />
         </div>
 
         <div style={{ fontFamily:"'Outfit',sans-serif", fontSize:"1.15rem", fontWeight:800, marginBottom:6 }}>{ex.name}</div>

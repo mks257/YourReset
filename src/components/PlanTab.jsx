@@ -1,4 +1,5 @@
-import ExerciseAnimation from "./ExerciseAnimation";
+import Exercise3DPreview from "./Exercise3DPreview";
+import ExerciseAnimation from "./ExerciseAnimation"; // kept for exercise-card thumbnails
 import ReadinessCheck from "./ReadinessCheck";
 import { WEEK_PLAN, EQUIPMENT_MAP, SUBSTITUTIONS } from "../workoutData";
 import { PHASE_EMOJI } from "../cycleEngine";
@@ -63,11 +64,9 @@ export default function PlanTab({
           <button className="primary-action">Start workout</button>
         </div>
 
-        {/* Large avatar — 35–45% of card width */}
-        <div className="avatar-preview">
-          <div style={{ transform:"scale(1.05)", transformOrigin:"center bottom" }}>
-            <ExerciseAnimation type={avatarEx.anim} color={theme.accent} />
-          </div>
+        {/* 3D avatar in today card — right column */}
+        <div className="avatar-preview" style={{ overflow:"hidden", borderRadius:20 }}>
+          <Exercise3DPreview type={avatarEx.anim} color={theme.accent} height={200} />
         </div>
       </section>
 
