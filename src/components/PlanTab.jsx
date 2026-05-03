@@ -1,27 +1,4 @@
-import { lazy, Suspense } from "react";
-import ExerciseAnimation from "./ExerciseAnimation"; // used for exercise-card thumbnails
-
-// Three.js chunk — lazy so it doesn't inflate initial JS parse time
-const Exercise3DPreview = lazy(() => import("./Exercise3DPreview"));
-
-// Slim placeholder matching the avatar-preview column while Three.js loads
-function AvatarSkeleton({ color }) {
-  return (
-    <div style={{
-      width: "100%", height: "100%", minHeight: 160,
-      display: "flex", alignItems: "center", justifyContent: "center",
-      background: `color-mix(in srgb, ${color} 8%, transparent)`,
-      borderRadius: 20,
-    }}>
-      <div style={{
-        width: 28, height: 28, borderRadius: "50%",
-        border: `2px solid ${color}33`, borderTopColor: color,
-        animation: "avatar-spin 0.7s linear infinite",
-      }} />
-      <style>{`@keyframes avatar-spin { to { transform: rotate(360deg); } }`}</style>
-    </div>
-  );
-}
+import ExerciseAnimation from "./ExerciseAnimation";
 import ReadinessCheck from "./ReadinessCheck";
 import { WEEK_PLAN, EQUIPMENT_MAP, SUBSTITUTIONS, SWAP_LIBRARY } from "../workoutData";
 import { PHASE_EMOJI } from "../cycleEngine";
@@ -47,7 +24,7 @@ export default function PlanTab({
   day, selectedDay, setSelectedDay, done, setDone, setModal,
   readiness, showReadiness, setReadiness, setShowReadiness,
   cycleState, profile, weekKey, theme, phaseCopy,
-  swapped = {}, onSwap, onUndoSwap, gender = "female",
+  swapped = {}, onSwap, onUndoSwap,
 }) {
   const doneCount  = day.exercises.filter(e => done[`${selectedDay}-${e.id}`]).length;
   const totalKcal  = day.exercises.reduce((a, e) => a + e.kcal, 0);
@@ -87,11 +64,9 @@ export default function PlanTab({
           <button className="primary-action">Start workout</button>
         </div>
 
-        {/* 3D avatar — lazy so Three.js only loads after first interaction */}
-        <div className="avatar-preview" style={{ overflow:"hidden", borderRadius:20 }}>
-          <Suspense fallback={<AvatarSkeleton color={theme.accent} />}>
-            <Exercise3DPreview type={avatarEx.anim} color={theme.accent} height={200} gender={gender} />
-          </Suspense>
+        {/* 2D exercise animation — instant, no Three.js overhead */}
+        <div className="avatar-preview" style={{ display:"flex", alignItems:"center", justifyContent:"center" }}>
+          <ExerciseAnimation type={avatarEx.anim} color={theme.accent} />
         </div>
       </section>
 

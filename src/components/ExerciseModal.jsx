@@ -1,25 +1,18 @@
 import { useState, useEffect, useRef, useCallback, lazy, Suspense } from "react";
 import { createVideoGeneration, pollGeneration, extractVideoUrl } from "../higgsfieldApi";
 import WorkoutLogger from "./WorkoutLogger";
+import ExerciseAnimation from "./ExerciseAnimation";
 import { T } from "../theme";
 import * as Storage from "../storage";
 
-// Three.js is large (~880KB) — lazy-load so it only downloads when a modal opens
+// 3D preview — only loaded when user explicitly taps "View 3D"
+// Keeps the 880KB Three.js chunk off the primary modal path.
 const Exercise3DPreview = lazy(() => import("./Exercise3DPreview"));
 
-// Fallback shown while Three.js chunk is loading (~100–300ms on first open)
-function AvatarSkeleton({ color, height }) {
+function Preview3DSpinner({ color, height }) {
   return (
-    <div style={{
-      width: "100%", height, borderRadius: 16, overflow: "hidden",
-      background: `${color}08`,
-      display: "flex", alignItems: "center", justifyContent: "center",
-    }}>
-      <div style={{
-        width: 36, height: 36, borderRadius: "50%",
-        border: `2px solid ${color}33`, borderTopColor: color,
-        animation: "avatar-spin 0.7s linear infinite",
-      }} />
+    <div style={{ width:"100%", height, display:"flex", alignItems:"center", justifyContent:"center", background:`${color}08`, borderRadius:16 }}>
+      <div style={{ width:28, height:28, borderRadius:"50%", border:`2px solid ${color}33`, borderTopColor:color, animation:"avatar-spin 0.7s linear infinite" }} />
       <style>{`@keyframes avatar-spin { to { transform: rotate(360deg); } }`}</style>
     </div>
   );
@@ -32,9 +25,10 @@ function ExerciseModal({ ex, dayColor, onClose, onToggleDone, isDone, selectedDa
   // Check localStorage for a cached URL before going idle
   const cachedUrl = Storage.get(videoCacheKey(ex.id), null);
 
-  const [vidState, setVidState] = useState(cachedUrl ? "ready" : "idle");
-  const [videoUrl, setVideoUrl] = useState(cachedUrl);
+  const [vidState,  setVidState]  = useState(cachedUrl ? "ready" : "idle");
+  const [videoUrl,  setVideoUrl]  = useState(cachedUrl);
   const [statusMsg, setStatusMsg] = useState("");
+  const [show3D,    setShow3D]    = useState(false); // opt-in — keeps Three.js off primary path
   const pollRef = useRef(null);
 
   useEffect(() => () => clearInterval(pollRef.current), []);
@@ -109,12 +103,34 @@ function ExerciseModal({ ex, dayColor, onClose, onToggleDone, isDone, selectedDa
           color:T.muted, fontSize:"1rem", display:"flex", alignItems:"center", justifyContent:"center"
         }}>✕</button>
 
-        {/* 3D avatar — lazy-loaded so Three.js doesn't block initial render */}
-        <Suspense fallback={<AvatarSkeleton color={dayColor} height={230} />}>
-          <div style={{ marginBottom: 16, borderRadius: 16, overflow: "hidden", background: `${dayColor}08` }}>
-            <Exercise3DPreview type={ex.anim} color={dayColor} height={230} gender={gender} />
+        {/* Exercise visual — 2D by default, 3D available on tap */}
+        {!show3D ? (
+          <div style={{ display:"flex", justifyContent:"center", marginBottom:16, background:`${dayColor}0a`, borderRadius:16, padding:"12px 0", position:"relative" }}>
+            <ExerciseAnimation type={ex.anim} color={dayColor} />
+            <button
+              onClick={() => setShow3D(true)}
+              title="Load 3D preview"
+              style={{
+                position:"absolute", bottom:8, right:10,
+                padding:"4px 10px", borderRadius:99, fontSize:10, fontWeight:700,
+                border:`1px solid ${dayColor}33`, background:`${dayColor}12`,
+                color:dayColor, cursor:"pointer", opacity:0.75,
+              }}>
+              ▷ 3D
+            </button>
           </div>
-        </Suspense>
+        ) : (
+          <Suspense fallback={<Preview3DSpinner color={dayColor} height={230} />}>
+            <div style={{ marginBottom:16, borderRadius:16, overflow:"hidden", background:`${dayColor}08`, position:"relative" }}>
+              <Exercise3DPreview type={ex.anim} color={dayColor} height={230} gender={gender} />
+              <button
+                onClick={() => setShow3D(false)}
+                style={{ position:"absolute", bottom:8, right:10, padding:"4px 10px", borderRadius:99, fontSize:10, fontWeight:700, border:`1px solid ${dayColor}33`, background:`${dayColor}12`, color:dayColor, cursor:"pointer" }}>
+                ✕ 3D
+              </button>
+            </div>
+          </Suspense>
+        )}
 
         <div style={{ fontFamily:"'Outfit',sans-serif", fontSize:"1.15rem", fontWeight:800, marginBottom:6 }}>{ex.name}</div>
         <div style={{ display:"flex", gap:8, marginBottom:14, flexWrap:"wrap" }}>
