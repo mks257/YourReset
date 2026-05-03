@@ -8,6 +8,7 @@ import MetricsTab from "./components/MetricsTab";
 import CycleTab from "./components/CycleTab";
 import NutritionTab from "./components/NutritionTab";
 import SettingsPage from "./components/SettingsPage";
+import GutResetTab from "./components/GutResetTab";
 import ExerciseModal from "./components/ExerciseModal";
 
 // Warm, muted phase themes — not neon
@@ -35,6 +36,7 @@ const NAV = [
   { id:"metrics",   icon:"↗",  label:"Progress" },
   { id:"cycle",     icon:"◎",  label:"Cycle" },
   { id:"nutrition", icon:"✦",  label:"Fuel" },
+  { id:"gut",       icon:"○",  label:"Gut" },
   { id:"settings",  icon:"≡",  label:"You" },
 ];
 
@@ -129,6 +131,7 @@ export default function App() {
         {tab === "metrics"   && <MetricsTab liveData={liveData} />}
         {tab === "cycle"     && <CycleTab cycleState={cycleState} profile={profile} onResetProfile={() => { Storage.set('profile', null); setProfile(null); }} />}
         {tab === "nutrition" && <NutritionTab cycleState={cycleState} profile={profile} />}
+        {tab === "gut"       && <GutResetTab profile={profile} cycleState={cycleState} />}
         {tab === "settings"  && <SettingsPage profile={profile} onSave={(p) => { Storage.set('profile', p); setProfile(p); }} />}
       </div>
 
