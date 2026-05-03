@@ -182,6 +182,78 @@ export const SWAP_LIBRARY = {
   },
 };
 
+// ── Band-first swap overrides ─────────────────────────────────────────────
+// When profile.equipment includes "bands", these replace the SWAP_LIBRARY
+// entries below for exercises where resistance bands are meaningfully better
+// than the bodyweight alternative (more load, better movement arc, more progressive).
+// Exercises where bodyweight is already optimal (squat, push-up, lunge) are
+// intentionally omitted — they fall through to SWAP_LIBRARY.
+export const SWAP_LIBRARY_BANDS = {
+  // Cable exercises — band pull/row patterns are close to cable mechanics
+  face_pull: {
+    id:"swap_band_pull_apart", name:"Band Pull-Aparts",
+    sets:"3×20", reps:"20", kcal:16,
+    muscle:"Rear Delts, Upper Back", type:"Toning", anim:"lateralRaise",
+    tip:"Hold band at shoulder width, arms straight. Pull apart until hands reach ears. Squeeze shoulder blades hard at end range.",
+  },
+  seated_row: {
+    id:"swap_band_row", name:"Band Seated Row",
+    sets:"3×15", reps:"15", kcal:30,
+    muscle:"Mid Back, Lats", type:"Strength", anim:"seatedRow",
+    tip:"Loop band around feet, sit tall, pull handles to navel. Full extension before each rep. Same pull pattern as cable row.",
+  },
+
+  // Dumbbell exercises — bands add progressive resistance bodyweight can't match
+  lat_raise: {
+    id:"swap_band_lateral", name:"Band Lateral Raises",
+    sets:"3×15", reps:"15", kcal:20,
+    muscle:"Side Delts", type:"Toning", anim:"lateralRaise",
+    tip:"Stand on band, hold ends at sides. Raise arms to shoulder height. Bands increase resistance at the top where delts are strongest.",
+  },
+  bicep_curl: {
+    id:"swap_band_curl", name:"Band Bicep Curls",
+    sets:"3×15", reps:"15", kcal:22,
+    muscle:"Biceps", type:"Toning", anim:"bicepCurl",
+    tip:"Stand on band, palms forward. Curl with controlled tempo. Squeeze at top. Cleaner resistance curve than towel curls.",
+  },
+  hammer_curl: {
+    id:"swap_band_hammer", name:"Band Hammer Curls",
+    sets:"3×12", reps:"12", kcal:18,
+    muscle:"Biceps, Forearms", type:"Toning", anim:"hammerCurl",
+    tip:"Stand on band, neutral grip (thumbs up). Curl keeping wrist neutral throughout. Targets brachialis and brachioradialis.",
+  },
+  shoulder_press: {
+    id:"swap_band_ohp", name:"Band Overhead Press",
+    sets:"3×12", reps:"12", kcal:28,
+    muscle:"Shoulders, Triceps", type:"Strength", anim:"shoulderPress",
+    tip:"Stand on band, handles at shoulder height. Press overhead to full extension. Significantly better loading than pike push-ups.",
+  },
+  db_row: {
+    id:"swap_band_bent_row", name:"Band Bent-Over Row",
+    sets:"3×12 each", reps:"12", kcal:35,
+    muscle:"Mid Back, Lats", type:"Strength", anim:"dbRow",
+    tip:"Stand on band, hinge at hip, row handle to hip. Same elbow path as dumbbell row. Single-arm for full range.",
+  },
+  rdl: {
+    id:"swap_band_rdl", name:"Band Romanian Deadlift",
+    sets:"3×15", reps:"15", kcal:38,
+    muscle:"Hamstrings, Glutes", type:"Strength", anim:"rdl",
+    tip:"Stand on band, hold handles, hinge at hips with flat back. Band loads the movement better than good mornings alone.",
+  },
+  chest_press: {
+    id:"swap_band_press", name:"Band Chest Press",
+    sets:"3×15", reps:"15", kcal:35,
+    muscle:"Chest, Triceps", type:"Strength", anim:"chestPress",
+    tip:"Loop band behind back, hold handles. Press forward from chest height. More progressive than push-ups — can increase resistance over time.",
+  },
+  tricep_ext: {
+    id:"swap_band_tricep", name:"Band Tricep Pushdown",
+    sets:"3×15", reps:"15", kcal:22,
+    muscle:"Triceps", type:"Toning", anim:"tricepPushdown",
+    tip:"Anchor band overhead (door, hook). Hold handles, tuck elbows to sides. Push down to full extension. Identical motion to cable pushdown.",
+  },
+};
+
 // ── Live health data ───────────────────────────────────────────────────────
 export const HEALTH_SNAPSHOT = {
   steps: 5943, stepGoal: 10000,

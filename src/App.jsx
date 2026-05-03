@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import * as Storage from "./storage";
 import { getCycleState, PHASE_EMOJI, buildPhaseNote } from "./cycleEngine";
-import { WEEK_PLAN, HEALTH_SNAPSHOT, SWAP_LIBRARY } from "./workoutData";
+import { WEEK_PLAN, HEALTH_SNAPSHOT, SWAP_LIBRARY, SWAP_LIBRARY_BANDS } from "./workoutData";
 import Onboarding from "./Onboarding";
 import PlanTab from "./components/PlanTab";
 import MetricsTab from "./components/MetricsTab";
@@ -129,7 +129,11 @@ export default function App() {
             theme={theme} phaseCopy={phaseCopy} liveData={liveData}
             swapped={swapped}
             onSwap={(exId) => {
-              const swap = SWAP_LIBRARY[exId];
+              const hasBands = (profile?.equipment || []).includes("bands");
+              // Band-first: prefer band alternative when user has resistance bands
+              // and the exercise has a meaningfully better band swap.
+              // Falls through to bodyweight SWAP_LIBRARY if no band entry exists.
+              const swap = (hasBands && SWAP_LIBRARY_BANDS[exId]) || SWAP_LIBRARY[exId];
               if (swap) setSwapped(p => ({ ...p, [`${selectedDay}-${exId}`]: swap }));
             }}
             onUndoSwap={(exId) => setSwapped(p => {
