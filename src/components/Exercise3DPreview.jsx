@@ -10,9 +10,12 @@
  *   root → pelvis → (L/R hip → thigh → knee → shin)
  */
 
-import { useRef, useEffect } from "react";
+import { useRef, useEffect, lazy, Suspense as R3FSuspense } from "react";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import { MathUtils } from "three";
+
+// Real Mixamo character — lazy-loaded so it doesn't block the primitive mannequin
+const FBXMannequin = lazy(() => import("./FBXMannequin"));
 
 // ── Camera presets per animation category ────────────────────────────────
 // pos: camera world position  target: lookAt point
@@ -421,7 +424,11 @@ export default function Exercise3DPreview({ type = "idle", color = "#9bd8b4", he
         {/* Phase accent rim light — wraps the figure in the current phase colour */}
         <pointLight position={[-1.8, 2.5, -1.2]} intensity={1.2} color={color} distance={4} />
 
-        <Mannequin animKey={animKey} accent={color} gender={gender} />
+        {/* FBXMannequin loads real Mixamo character + animations.
+            Falls back to primitive Mannequin while FBX files load. */}
+        <R3FSuspense fallback={<Mannequin animKey={animKey} accent={color} gender={gender} />}>
+          <FBXMannequin animKey={animKey} accent={color} gender={gender} />
+        </R3FSuspense>
       </Canvas>
     </div>
   );
