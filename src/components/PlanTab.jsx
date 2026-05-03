@@ -23,7 +23,7 @@ function AvatarSkeleton({ color }) {
   );
 }
 import ReadinessCheck from "./ReadinessCheck";
-import { WEEK_PLAN, EQUIPMENT_MAP, SUBSTITUTIONS } from "../workoutData";
+import { WEEK_PLAN, EQUIPMENT_MAP, SUBSTITUTIONS, SWAP_LIBRARY } from "../workoutData";
 import { PHASE_EMOJI } from "../cycleEngine";
 
 function chipDate(dayIndex) {
@@ -47,6 +47,7 @@ export default function PlanTab({
   day, selectedDay, setSelectedDay, done, setDone, setModal,
   readiness, showReadiness, setReadiness, setShowReadiness,
   cycleState, profile, weekKey, theme, phaseCopy,
+  swapped = {}, onSwap, onUndoSwap,
 }) {
   const doneCount  = day.exercises.filter(e => done[`${selectedDay}-${e.id}`]).length;
   const totalKcal  = day.exercises.reduce((a, e) => a + e.kcal, 0);
@@ -133,38 +134,81 @@ export default function PlanTab({
 
         <div className="exercise-list" style={{ marginTop:10 }}>
           {day.exercises.map((ex, i) => {
-            const key        = `${selectedDay}-${ex.id}`;
-            const isDone     = !!done[key];
+            const key      = `${selectedDay}-${ex.id}`;
+            const isDone   = !!done[key];
+            const swapEx   = swapped[key];           // replacement exercise if swapped
+            const display  = swapEx || ex;           // what to render
+            const isSwapped = !!swapEx;
+
+            // Equipment check always runs on original exercise
             const required   = EQUIPMENT_MAP[ex.id] || [];
             const missing    = required.filter(e => !(profile?.equipment || []).includes(e));
-            const hasMissing = missing.length > 0;
+            const hasMissing = !isSwapped && missing.length > 0;
             const sub        = SUBSTITUTIONS[ex.id];
+            const canSwap    = !isSwapped && hasMissing && !!SWAP_LIBRARY[ex.id];
             const num        = String(i + 1).padStart(2, "0");
 
             return (
               <article key={ex.id}
-                className={`exercise-row fade-in${isDone ? " ex-done" : hasMissing ? " ex-warn" : ""}`}
+                className={`exercise-row fade-in${isDone ? " ex-done" : isSwapped ? "" : hasMissing ? " ex-warn" : ""}`}
                 style={{ animationDelay:`${0.025 * i}s` }}
-                onClick={() => setModal(ex)}>
+                onClick={() => setModal(display)}>
 
                 <div className={`exercise-index${isDone ? " done" : ""}`}>
                   {isDone ? "✓" : num}
                 </div>
 
                 <div className="exercise-main">
-                  <h3 style={{ textDecoration: isDone ? "line-through" : "none" }}>{ex.name}</h3>
-                  <p>{ex.sets} · {ex.muscle}</p>
+                  <h3 style={{ textDecoration: isDone ? "line-through" : "none" }}>
+                    {display.name}
+                  </h3>
+                  <p>{display.sets} · {display.muscle}</p>
                   <div className="tag-row">
-                    <span>{ex.type}</span>
+                    <span>{display.type}</span>
                     <span style={{ color:"var(--yr-amber)", background:"rgba(242,189,115,0.1)" }}>
-                      {ex.kcal} kcal
+                      {display.kcal} kcal
                     </span>
                     {hasMissing && (
                       <span className="tag-warn">No {missing.join(", ")}</span>
                     )}
+                    {isSwapped && (
+                      <span style={{ fontSize:10, padding:"3px 8px", borderRadius:99, fontWeight:700,
+                        color:"var(--phase-accent)", background:"var(--phase-soft)", border:"1px solid var(--phase-border)" }}>
+                        Swapped
+                      </span>
+                    )}
                   </div>
-                  {hasMissing && sub && (
+
+                  {/* Equipment warning + one-tap Swap button */}
+                  {hasMissing && sub && !canSwap && (
                     <p className="equipment-warning">Try: {sub}</p>
+                  )}
+                  {canSwap && (
+                    <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginTop:5 }}>
+                      <p className="equipment-warning" style={{ margin:0 }}>Try: {sub}</p>
+                      <button
+                        onClick={(e) => { e.stopPropagation(); onSwap(ex.id); }}
+                        style={{
+                          padding:"4px 10px", borderRadius:99, fontSize:11, fontWeight:700,
+                          border:"1px solid var(--phase-border)", background:"var(--phase-soft)",
+                          color:"var(--phase-accent)", cursor:"pointer", whiteSpace:"nowrap", flexShrink:0,
+                        }}>
+                        Swap →
+                      </button>
+                    </div>
+                  )}
+
+                  {/* Undo swap */}
+                  {isSwapped && (
+                    <button
+                      onClick={(e) => { e.stopPropagation(); onUndoSwap(ex.id); }}
+                      style={{
+                        marginTop:5, padding:"3px 8px", borderRadius:99, fontSize:10, fontWeight:600,
+                        border:"1px solid var(--yr-border)", background:"transparent",
+                        color:"var(--yr-muted)", cursor:"pointer",
+                      }}>
+                      ↩ Restore original
+                    </button>
                   )}
                 </div>
 

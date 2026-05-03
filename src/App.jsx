@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import * as Storage from "./storage";
 import { getCycleState, PHASE_EMOJI, buildPhaseNote } from "./cycleEngine";
-import { WEEK_PLAN, HEALTH_SNAPSHOT } from "./workoutData";
+import { WEEK_PLAN, HEALTH_SNAPSHOT, SWAP_LIBRARY } from "./workoutData";
 import Onboarding from "./Onboarding";
 import PlanTab from "./components/PlanTab";
 import MetricsTab from "./components/MetricsTab";
@@ -55,6 +55,7 @@ export default function App() {
   const [selectedDay, setSelectedDay] = useState(0);
   const weekKey = Storage.getWeekKey();
   const [done, setDone]         = useState(() => Storage.get(`done_${weekKey}`, {}));
+  const [swapped, setSwapped]   = useState(() => Storage.get(`swaps_${weekKey}`, {}));
   const [modal, setModal]       = useState(null);
   const [liveData, setLiveData] = useState(HEALTH_SNAPSHOT);
   const [readiness, setReadiness]         = useState(() => Storage.get(`readiness_${Storage.getTodayKey()}`, null));
@@ -75,7 +76,8 @@ export default function App() {
     r.style.setProperty("--phase-border", theme.border);
   }, [theme.accent]);
 
-  useEffect(() => { Storage.set(`done_${weekKey}`, done); }, [done, weekKey]);
+  useEffect(() => { Storage.set(`done_${weekKey}`,  done);    }, [done,    weekKey]);
+  useEffect(() => { Storage.set(`swaps_${weekKey}`, swapped); }, [swapped, weekKey]);
   useEffect(() => { if (readiness) Storage.set(`readiness_${Storage.getTodayKey()}`, readiness); }, [readiness]);
 
   useEffect(() => {
@@ -124,8 +126,17 @@ export default function App() {
             readiness={readiness} showReadiness={showReadiness}
             setReadiness={setReadiness} setShowReadiness={setShowReadiness}
             cycleState={cycleState} profile={profile} weekKey={weekKey}
-            theme={theme} phaseCopy={phaseCopy} greeting={greeting}
-            liveData={liveData}
+            theme={theme} phaseCopy={phaseCopy} liveData={liveData}
+            swapped={swapped}
+            onSwap={(exId) => {
+              const swap = SWAP_LIBRARY[exId];
+              if (swap) setSwapped(p => ({ ...p, [`${selectedDay}-${exId}`]: swap }));
+            }}
+            onUndoSwap={(exId) => setSwapped(p => {
+              const next = { ...p };
+              delete next[`${selectedDay}-${exId}`];
+              return next;
+            })}
           />
         )}
         {tab === "metrics"   && <MetricsTab liveData={liveData} />}

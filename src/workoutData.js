@@ -28,6 +28,78 @@ export const SUBSTITUTIONS = {
   kb_swing:       "Dumbbell swings — identical motion",
 };
 
+// ── Full exercise objects for one-tap swaps ────────────────────────────────
+// Keyed by the original exercise id that requires missing equipment.
+// Each value is a complete exercise object ready to drop into the plan.
+export const SWAP_LIBRARY = {
+  tricep_push: {
+    id:"swap_diamond_pushup", name:"Diamond Push-Ups",
+    sets:"3×12", reps:"12", kcal:28,
+    muscle:"Triceps, Chest", type:"Toning", anim:"pushup",
+    tip:"Hands close in a diamond shape below chest. Keep elbows tracking back, not flaring out.",
+  },
+  cable_kick: {
+    id:"swap_donkey_kick", name:"Donkey Kicks",
+    sets:"3×15 each", reps:"15", kcal:35,
+    muscle:"Glutes", type:"Toning", anim:"cableKickback",
+    tip:"On all fours. Drive heel toward ceiling, squeeze glute at top. Hips stay square throughout.",
+  },
+  lat_pull: {
+    id:"swap_table_row", name:"Bodyweight Rows",
+    sets:"3×10", reps:"10", kcal:40,
+    muscle:"Lats, Mid Back", type:"Strength", anim:"seatedRow",
+    tip:"Lie under a sturdy table, grip edge, pull chest up to hands. Keep body straight like a plank.",
+  },
+  seated_row: {
+    id:"swap_db_row", name:"Dumbbell Bent-Over Row",
+    sets:"3×12 each", reps:"12", kcal:52,
+    muscle:"Mid Back", type:"Strength", anim:"dbRow",
+    tip:"Hip hinge forward, row dumbbell to hip. Same pull pattern as the cable row — heavy is fine.",
+  },
+  face_pull: {
+    id:"swap_band_pull", name:"Band Pull-Aparts",
+    sets:"3×15", reps:"15", kcal:18,
+    muscle:"Rear Delts, Upper Back", type:"Toning", anim:"lateralRaise",
+    tip:"Hold band at shoulder width with straight arms, pull apart until hands reach ears. Squeeze blades.",
+  },
+  row_machine: {
+    id:"swap_burpee_cardio", name:"Burpee Intervals",
+    sets:"10 min", reps:"40s on / 20s off", kcal:110,
+    muscle:"Full Body", type:"Fat Burn", anim:"burpee",
+    tip:"Same cardiovascular demand as rowing. Work at 80% effort during each interval.",
+  },
+  finisher_stairs: {
+    id:"swap_step_up", name:"Box Step-Ups",
+    sets:"10 min", reps:"continuous", kcal:80,
+    muscle:"Glutes, Quads", type:"Fat Burn", anim:"stepUp",
+    tip:"Use a sturdy chair, step, or bench. Full foot on surface, drive through heel. Add dumbbells to progress.",
+  },
+  stairs_leg: {
+    id:"swap_bulgarian", name:"Bulgarian Split Squats",
+    sets:"3×12 each", reps:"12", kcal:68,
+    muscle:"Quads, Glutes", type:"Strength", anim:"lunge",
+    tip:"Rear foot elevated on bench or chair. Deep front-leg squat. One of the best lower-body builders.",
+  },
+  incline_walk: {
+    id:"swap_hill_walk", name:"Outdoor Hill Walk",
+    sets:"30 min", reps:"moderate pace", kcal:168,
+    muscle:"Full Body", type:"Fat Burn", anim:"inclineWalk",
+    tip:"Any incline works — stairs, parking ramps, hill paths. Same fat-burn stimulus as treadmill incline.",
+  },
+  hiit_sprint: {
+    id:"swap_outdoor_sprint", name:"Outdoor Sprint Intervals",
+    sets:"12 min", reps:"30s sprint / 90s walk", kcal:122,
+    muscle:"Full Body", type:"Fat Burn", anim:"treadmill",
+    tip:"Flat ground or slight slope. 80% sprint effort. Same EPOC afterburn as treadmill intervals.",
+  },
+  kb_swing: {
+    id:"swap_db_swing", name:"Dumbbell Swings",
+    sets:"4×20", reps:"20", kcal:85,
+    muscle:"Glutes, Core, Back", type:"Fat Burn", anim:"kbSwing",
+    tip:"Hold one dumbbell by one end with both hands. Identical hip-hinge and drive as the kettlebell swing.",
+  },
+};
+
 // ── Live health data ───────────────────────────────────────────────────────
 export const HEALTH_SNAPSHOT = {
   steps: 5943, stepGoal: 10000,
