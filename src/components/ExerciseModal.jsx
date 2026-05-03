@@ -134,7 +134,7 @@ function ExerciseModal({ ex, dayColor, onClose, onToggleDone, isDone, selectedDa
               background:"linear-gradient(135deg,#b48bfa,#38d9c0)",
               display:"flex", alignItems:"center", justifyContent:"center", fontSize:"0.75rem", flexShrink:0,
             }}>▶</div>
-            <div>
+            <div style={{ flex:1 }}>
               <div style={{ fontFamily:"'Outfit',sans-serif", fontWeight:800, fontSize:"0.85rem", color:T.text }}>
                 Motion demo
               </div>
@@ -142,6 +142,16 @@ function ExerciseModal({ ex, dayColor, onClose, onToggleDone, isDone, selectedDa
                 Image-to-video · Higgsfield · ~60s to generate
               </div>
             </div>
+            {cachedUrl && vidState === "ready" && (
+              <span style={{
+                fontSize:"0.6rem", fontWeight:700, padding:"3px 8px",
+                borderRadius:99, border:"1px solid rgba(94,234,212,0.3)",
+                background:"rgba(94,234,212,0.1)", color:"#5eead4",
+                whiteSpace:"nowrap",
+              }}>
+                Saved demo
+              </span>
+            )}
           </div>
 
           {vidState === "idle" && (

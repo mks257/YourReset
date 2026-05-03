@@ -1,5 +1,5 @@
 import { T } from "../theme";
-import { NUTRITION_PHASES, getDailyNudge, GOAL_NUTRITION, getGoalNudge } from "../nutritionEngine";
+import { NUTRITION_PHASES, getDailyNudge, GOAL_NUTRITION, GOAL_NUTRITION_EXTRA, getGoalNudge } from "../nutritionEngine";
 import { PHASE_EMOJI } from "../cycleEngine";
 
 const GENERAL_TIPS = {
@@ -28,7 +28,9 @@ function NutritionTab({ cycleState, profile }) {
   const phase = isFemaleCycle ? cycleState?.phase : null;
   const goal = profile?.goal || "wellness";
   
-  const data = phase ? NUTRITION_PHASES[phase] : GOAL_NUTRITION[goal];
+  const data = phase
+    ? NUTRITION_PHASES[phase]
+    : (GOAL_NUTRITION[goal] || GOAL_NUTRITION_EXTRA[goal]);
   const nudge = phase ? getDailyNudge(phase) : getGoalNudge(goal);
   const d = data || GENERAL_TIPS;
   

@@ -187,12 +187,54 @@ export const GOAL_NUTRITION = {
   },
 };
 
+// muscle_tone — close to strength but with leaner emphasis
+export const GOAL_NUTRITION_EXTRA = {
+  muscle_tone: {
+    protein: "Aim for 1.8–2.0 g/kg bodyweight to preserve and build lean muscle while staying lean. Spread intake across 4 meals.",
+    carbs: "Moderate carbs timed around training. Pre-workout fuel supports performance; post-workout carbs aid recovery and muscle fullness.",
+    hydration: "Aim for 2.5–3 L/day. Muscle tissue is ~75% water — hydration directly affects pump and performance.",
+    keyNutrients: [
+      { name: "Leucine", why: "Key amino acid trigger for muscle protein synthesis.", foods: ["Chicken", "Eggs", "Dairy", "Whey protein", "Fish"] },
+      { name: "Creatine", why: "Supports lean muscle volume and explosive output.", foods: ["Beef", "Salmon", "Pork", "(or 5g/day supplement)"] },
+      { name: "Magnesium", why: "Involved in muscle contraction and recovery. Often depleted by training.", foods: ["Almonds", "Dark chocolate", "Avocado", "Spinach"] },
+    ],
+    cravings: "If you're craving carbs, your glycogen might be low from training. A small carb + protein snack (rice cake + peanut butter) supports both recovery and body composition better than refined snacks.",
+    mealIdeas: [
+      "Chicken breast with roasted sweet potato and greens",
+      "Greek yogurt with banana, granola, and chia seeds",
+      "Salmon fillet with quinoa and roasted asparagus",
+      "Protein oats with almond butter and berries",
+      "Turkey and avocado wrap with spinach",
+    ],
+  },
+  flexibility: {
+    protein: "Aim for 1.4–1.6 g/kg bodyweight. Collagen synthesis for connective tissue benefits from consistent moderate protein intake.",
+    carbs: "Moderate complex carbs to fuel movement sessions and support nervous system recovery. Avoid under-eating on active days.",
+    hydration: "Fascia and connective tissue need consistent hydration. Aim for 2–2.5 L/day and increase before and after stretching sessions.",
+    keyNutrients: [
+      { name: "Collagen + Vitamin C", why: "Vitamin C activates collagen synthesis. Take together 30–60 min before stretching for best effect.", foods: ["Bone broth", "Citrus", "Bell peppers", "Kiwi", "Gelatin"] },
+      { name: "Omega-3s", why: "Reduces systemic inflammation and supports joint lubrication.", foods: ["Salmon", "Walnuts", "Flaxseed", "Sardines", "Chia seeds"] },
+      { name: "Magnesium", why: "Relaxes muscles and supports parasympathetic recovery — ideal for mobility-focused training.", foods: ["Dark leafy greens", "Almonds", "Banana", "Dark chocolate"] },
+    ],
+    cravings: "Mobility and yoga practices are parasympathetic — they can actually reduce appetite. Don't skip meals thinking you 'didn't burn enough'. Collagen-supportive snacks (bone broth, citrus + protein) are especially useful after flexibility sessions.",
+    mealIdeas: [
+      "Bone broth soup with vegetables and noodles",
+      "Salmon and roasted root vegetables",
+      "Smoothie: mango, spinach, collagen powder, coconut water",
+      "Overnight oats with chia seeds and kiwi",
+      "Avocado toast with eggs and a glass of orange juice",
+    ],
+  },
+};
+
 export function getGoalNudge(goal) {
   const nudges = {
-    fat_loss: "Prioritize protein at every meal today to keep your metabolism elevated and stay full.",
-    strength: "Don't skimp on your post-workout carbs today — they're essential for shuttling protein into your muscles.",
-    wellness: "Focus on eating the rainbow today. Aim for at least 3 different colors of vegetables.",
-    endurance: "Hydration starts the day before your long session. Drink an extra glass of water right now.",
+    fat_loss:    "Prioritize protein at every meal today to keep your metabolism elevated and stay full.",
+    strength:    "Don't skimp on your post-workout carbs today — they're essential for shuttling protein into your muscles.",
+    wellness:    "Focus on eating the rainbow today. Aim for at least 3 different colors of vegetables.",
+    endurance:   "Hydration starts the day before your long session. Drink an extra glass of water right now.",
+    muscle_tone: "A protein-rich snack within 30 minutes of training today will maximize the muscle response.",
+    flexibility: "Try having a collagen-rich snack 45 minutes before your stretch session for connective tissue support.",
   };
   return nudges[goal] || "Eat whole foods, stay hydrated, and listen to your body today.";
 }

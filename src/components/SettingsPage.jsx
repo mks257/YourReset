@@ -33,6 +33,7 @@ function SettingsPage({ profile, onSave }) {
   const [healthSync, setHealthSync] = useState(profile.healthSync || false);
   const [clearConfirm, setClearConfirm] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [demoVideosCleared, setDemoVideosCleared] = useState(null);
 
   const currentCycle = cycleTracking && cycleStartDate
     ? getCycleState(cycleStartDate, cycleLength)
@@ -78,6 +79,18 @@ function SettingsPage({ profile, onSave }) {
     }
     keysToRemove.forEach(k => localStorage.removeItem(k));
     window.location.reload();
+  };
+
+  const handleClearDemoVideos = () => {
+    let count = 0;
+    const keysToRemove = [];
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (key && key.startsWith('yr_hf_vid_')) keysToRemove.push(key);
+    }
+    keysToRemove.forEach(k => { localStorage.removeItem(k); count++; });
+    setDemoVideosCleared(count);
+    setTimeout(() => setDemoVideosCleared(null), 3000);
   };
 
   const sectionStyle = { background: T.card, border: `1px solid ${T.border}`, borderRadius: 18, padding: "18px 20px", marginBottom: 14 };
@@ -216,6 +229,17 @@ function SettingsPage({ profile, onSave }) {
             padding: "10px 16px", borderRadius: 10, border: `1px solid ${T.teal}44`,
             background: `${T.teal}12`, color: T.teal, fontFamily: "'Outfit',sans-serif", fontWeight: 700, fontSize: "0.8rem", cursor: "pointer",
           }}>⬇ Export my data</button>
+          <button onClick={handleClearDemoVideos} style={{
+            padding: "10px 16px", borderRadius: 10, border: `1px solid ${T.violet}33`,
+            background: demoVideosCleared !== null ? `${T.green}15` : `${T.violet}10`,
+            color: demoVideosCleared !== null ? T.green : T.violet,
+            fontFamily: "'Outfit',sans-serif", fontWeight: 700, fontSize: "0.8rem", cursor: "pointer",
+            transition: "all 0.2s",
+          }}>
+            {demoVideosCleared !== null
+              ? `✓ Cleared ${demoVideosCleared} demo${demoVideosCleared !== 1 ? "s" : ""}`
+              : "Clear demo videos"}
+          </button>
           <button onClick={handleClearData} style={{
             padding: "10px 16px", borderRadius: 10, border: `1px solid ${clearConfirm ? T.red : T.border}`,
             background: clearConfirm ? `${T.red}20` : "transparent", color: clearConfirm ? T.red : T.muted,
