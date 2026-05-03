@@ -152,7 +152,7 @@ export default function PlanTab({
               <article key={ex.id}
                 className={`exercise-row fade-in${isDone ? " ex-done" : isSwapped ? "" : hasMissing ? " ex-warn" : ""}`}
                 style={{ animationDelay:`${0.025 * i}s` }}
-                onClick={() => setModal(display)}>
+                onClick={() => setModal({ ...display, _doneKey: key })}>
 
                 <div className={`exercise-index${isDone ? " done" : ""}`}>
                   {isDone ? "✓" : num}

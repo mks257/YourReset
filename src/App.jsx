@@ -157,15 +157,20 @@ export default function App() {
       </nav>
 
       {/* ── Exercise modal ── */}
-      {modal && (
-        <ExerciseModal
-          ex={modal} dayColor={theme.accent}
-          onClose={() => setModal(null)}
-          isDone={!!done[`${selectedDay}-${modal.id}`]}
-          onToggleDone={() => setDone(p => ({ ...p, [`${selectedDay}-${modal.id}`]: !p[`${selectedDay}-${modal.id}`] }))}
-          selectedDay={selectedDay} weekKey={weekKey} phaseNote={phaseNote}
-        />
-      )}
+      {modal && (() => {
+        // _doneKey is set by PlanTab to always use the original exercise's slot key,
+        // even when the modal displays a swapped exercise. Falls back to modal.id for safety.
+        const doneKey = modal._doneKey || `${selectedDay}-${modal.id}`;
+        return (
+          <ExerciseModal
+            ex={modal} dayColor={theme.accent}
+            onClose={() => setModal(null)}
+            isDone={!!done[doneKey]}
+            onToggleDone={() => setDone(p => ({ ...p, [doneKey]: !p[doneKey] }))}
+            selectedDay={selectedDay} weekKey={weekKey} phaseNote={phaseNote}
+          />
+        );
+      })()}
     </>
   );
 }
