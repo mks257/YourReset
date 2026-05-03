@@ -98,6 +98,88 @@ export const SWAP_LIBRARY = {
     muscle:"Glutes, Core, Back", type:"Fat Burn", anim:"kbSwing",
     tip:"Hold one dumbbell by one end with both hands. Identical hip-hinge and drive as the kettlebell swing.",
   },
+
+  // ── Dumbbell → bodyweight swaps ──────────────────────────────────────────
+  // Used when profile has no dumbbells. Bodyweight first for maximum compatibility.
+
+  chest_press: {
+    id:"swap_pushup_chest", name:"Push-Ups",
+    sets:"3×15", reps:"15", kcal:38,
+    muscle:"Chest, Triceps", type:"Toning", anim:"pushup",
+    tip:"Wide hands target the chest. Elbows at 45° — don't flare. Full range of motion, chest nearly touches floor.",
+  },
+  chest_fly: {
+    id:"swap_wide_pushup", name:"Wide Push-Ups",
+    sets:"3×12", reps:"12", kcal:32,
+    muscle:"Chest", type:"Toning", anim:"pushup",
+    tip:"Hands wider than shoulder width. Elbows track outward — mimics the fly arc across the chest.",
+  },
+  incline_press: {
+    id:"swap_incline_pushup", name:"Incline Push-Ups",
+    sets:"3×15", reps:"15", kcal:28,
+    muscle:"Upper Chest", type:"Toning", anim:"pushup",
+    tip:"Hands on a chair or bench. Same pressing pattern as the incline dumbbell press — targets upper chest.",
+  },
+  squat_goblet: {
+    id:"swap_bw_squat", name:"Bodyweight Squat",
+    sets:"4×20", reps:"20", kcal:55,
+    muscle:"Quads, Glutes", type:"Strength", anim:"gobletSquat",
+    tip:"Feet shoulder-width, toes slightly out. Drop hips below parallel. Drive heels into floor to stand.",
+  },
+  rdl: {
+    id:"swap_good_morning", name:"Good Mornings",
+    sets:"3×15", reps:"15", kcal:35,
+    muscle:"Hamstrings, Glutes, Low Back", type:"Strength", anim:"rdl",
+    tip:"Hands behind head, soft knee bend. Hinge at hips until torso is near parallel. Identical pattern to RDL.",
+  },
+  shoulder_press: {
+    id:"swap_pike_pushup", name:"Pike Push-Ups",
+    sets:"3×12", reps:"12", kcal:30,
+    muscle:"Shoulders, Triceps", type:"Strength", anim:"pushup",
+    tip:"Inverted V position, hands shoulder-width. Lower head toward floor. Directly mimics the overhead press.",
+  },
+  lat_raise: {
+    id:"swap_wall_angel", name:"Wall Angels",
+    sets:"3×15", reps:"15", kcal:15,
+    muscle:"Side Delts, Rear Delts, Upper Back", type:"Toning", anim:"lateralRaise",
+    tip:"Back flat against wall, arms at 90°. Slide arms overhead while keeping wrists and elbows on wall. Excellent shoulder health work.",
+  },
+  bicep_curl: {
+    id:"swap_towel_curl", name:"Towel Bicep Curls",
+    sets:"3×15", reps:"15", kcal:20,
+    muscle:"Biceps", type:"Toning", anim:"bicepCurl",
+    tip:"Loop a towel under one foot. Grip both ends and curl against resistance. Match the tempo of a dumbbell curl.",
+  },
+  hammer_curl: {
+    id:"swap_towel_hammer", name:"Towel Hammer Curls",
+    sets:"3×12", reps:"12", kcal:18,
+    muscle:"Biceps, Forearms", type:"Toning", anim:"hammerCurl",
+    tip:"Towel looped under foot, grip with neutral wrist (thumbs up). Same hand position and line of pull as the hammer curl.",
+  },
+  db_row: {
+    id:"swap_inverted_row", name:"Inverted Rows",
+    sets:"3×10", reps:"10", kcal:42,
+    muscle:"Mid Back, Lats", type:"Strength", anim:"seatedRow",
+    tip:"Lie under a sturdy table, grip the edge overhand. Pull chest to surface. More horizontal = harder. Best bodyweight row option.",
+  },
+  tricep_ext: {
+    id:"swap_tricep_dip", name:"Tricep Dips",
+    sets:"3×12", reps:"12", kcal:28,
+    muscle:"Triceps", type:"Toning", anim:"tricepPushdown",
+    tip:"Hands on chair or bench behind you, feet on floor. Lower until arms reach 90°, drive back up. Keep hips close to bench.",
+  },
+  deadlift: {
+    id:"swap_sl_rdl", name:"Single-Leg Deadlift (Bodyweight)",
+    sets:"3×10 each", reps:"10", kcal:40,
+    muscle:"Hamstrings, Glutes, Core", type:"Strength", anim:"rdl",
+    tip:"Balance on one leg, hinge at hip, reach forward with same-side arm. Demands balance, hamstring, and glute stability.",
+  },
+  push_pull: {
+    id:"swap_pushup_plank", name:"Push-Up to Plank Hold",
+    sets:"3×8", reps:"8", kcal:45,
+    muscle:"Chest, Core", type:"Fat Burn", anim:"pushup",
+    tip:"Do a push-up, then hold the top plank for 3 seconds. No dumbbell needed — chest, triceps, and core under constant tension.",
+  },
 };
 
 // ── Live health data ───────────────────────────────────────────────────────
