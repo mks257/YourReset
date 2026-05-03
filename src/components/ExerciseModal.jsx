@@ -1,12 +1,19 @@
 import { useState, useEffect, useRef, useCallback } from "react";
-import { createVideoGeneration, pollGeneration } from "../higgsfieldApi";
+import { createVideoGeneration, pollGeneration, extractVideoUrl } from "../higgsfieldApi";
 import ExerciseAnimation from "./ExerciseAnimation";
 import WorkoutLogger from "./WorkoutLogger";
 import { T } from "../theme";
+import * as Storage from "../storage";
+
+// Cache key per exercise — avoids re-generating on every modal open
+const videoCacheKey = (exId) => `hf_vid_${exId}`;
 
 function ExerciseModal({ ex, dayColor, onClose, onToggleDone, isDone, selectedDay, weekKey, phaseNote }) {
-  const [vidState, setVidState] = useState("idle"); // idle | loading | ready | error
-  const [videoUrl, setVideoUrl] = useState(null);
+  // Check localStorage for a cached URL before going idle
+  const cachedUrl = Storage.get(videoCacheKey(ex.id), null);
+
+  const [vidState, setVidState] = useState(cachedUrl ? "ready" : "idle");
+  const [videoUrl, setVideoUrl] = useState(cachedUrl);
   const [statusMsg, setStatusMsg] = useState("");
   const pollRef = useRef(null);
 
@@ -16,31 +23,38 @@ function ExerciseModal({ ex, dayColor, onClose, onToggleDone, isDone, selectedDa
     setVidState("loading");
     setStatusMsg("Submitting to Higgsfield AI...");
     try {
-      const data = await createVideoGeneration(ex.name);
-      const genId = data.generation_id || data.request_id;
-      setStatusMsg("Generating your video...");
+      const data = await createVideoGeneration(ex.name, ex.type);
+      // Official API returns request_id; legacy path also checks generation_id
+      const genId = data.request_id || data.generation_id || data.id;
+      if (!genId) throw new Error("No request ID returned from API.");
+      setStatusMsg("Generating your video…");
 
       pollRef.current = setInterval(async () => {
         try {
           const poll = await pollGeneration(genId);
-          if (poll.status === "completed") {
+          const status = (poll.status || "").toLowerCase();
+
+          if (status === "completed" || status === "succeeded") {
             clearInterval(pollRef.current);
-            const url = poll.results?.raw?.url ?? poll.results?.url ?? poll.url;
+            const url = extractVideoUrl(poll);
+            if (!url) { setVidState("error"); setStatusMsg("Video ready but URL missing. Try again."); return; }
+            // Cache the URL in localStorage so this exercise doesn't re-generate
+            Storage.set(videoCacheKey(ex.id), url);
             setVideoUrl(url);
             setVidState("ready");
-          } else if (poll.status === "failed" || poll.status === "nsfw") {
+          } else if (status === "failed" || status === "error" || status === "nsfw") {
             clearInterval(pollRef.current);
             setVidState("error");
-            setStatusMsg("Generation failed. Please try again.");
+            setStatusMsg(poll.error || "Generation failed. Please try again.");
           } else {
-            setStatusMsg(`Status: ${poll.status}…`);
+            setStatusMsg(`${status || "processing"}…`);
           }
         } catch {
           clearInterval(pollRef.current);
           setVidState("error");
           setStatusMsg("Lost connection. Please try again.");
         }
-      }, 4000);
+      }, 5000);
     } catch (err) {
       setVidState("error");
       setStatusMsg(err.message || "Failed to connect to Higgsfield API.");
@@ -121,8 +135,12 @@ function ExerciseModal({ ex, dayColor, onClose, onToggleDone, isDone, selectedDa
               display:"flex", alignItems:"center", justifyContent:"center", fontSize:"0.75rem", flexShrink:0,
             }}>▶</div>
             <div>
-              <div style={{ fontFamily:"'Outfit',sans-serif", fontWeight:800, fontSize:"0.85rem", color:T.text }}>AI Video Demo</div>
-              <div style={{ fontSize:"0.62rem", color:T.muted }}>Powered by Higgsfield</div>
+              <div style={{ fontFamily:"'Outfit',sans-serif", fontWeight:800, fontSize:"0.85rem", color:T.text }}>
+                Motion demo
+              </div>
+              <div style={{ fontSize:"0.62rem", color:T.muted }}>
+                Image-to-video · Higgsfield · ~60s to generate
+              </div>
             </div>
           </div>
 
@@ -136,7 +154,7 @@ function ExerciseModal({ ex, dayColor, onClose, onToggleDone, isDone, selectedDa
               boxShadow:"0 4px 20px rgba(180,139,250,0.35)",
               display:"flex", alignItems:"center", justifyContent:"center", gap:8,
             }}>
-              ✨ Generate AI Video
+              Animate exercise demo
             </button>
           )}
 
@@ -152,7 +170,9 @@ function ExerciseModal({ ex, dayColor, onClose, onToggleDone, isDone, selectedDa
               <div style={{ fontSize:"0.78rem", color:"#b48bfa", fontWeight:600, animation:"hf-pulse 1.5s ease infinite" }}>
                 {statusMsg}
               </div>
-              <div style={{ fontSize:"0.62rem", color:T.muted, marginTop:4 }}>This takes ~30–90 seconds</div>
+              <div style={{ fontSize:"0.62rem", color:T.muted, marginTop:4 }}>
+                Applying motion to exercise frame…
+              </div>
             </div>
           )}
 
@@ -160,32 +180,50 @@ function ExerciseModal({ ex, dayColor, onClose, onToggleDone, isDone, selectedDa
             <div>
               <video
                 src={videoUrl}
-                controls
-                autoPlay
-                loop
-                playsInline
+                controls autoPlay loop playsInline
                 style={{
                   width:"100%", borderRadius:12, display:"block",
                   border:"1px solid rgba(180,139,250,0.3)",
                   maxHeight:320, objectFit:"cover",
                 }}
               />
-              <button onClick={()=>{ setVidState("idle"); setVideoUrl(null); }} style={{
-                marginTop:8, width:"100%", padding:"8px 0", borderRadius:10, border:"1px solid rgba(255,255,255,0.08)",
-                background:"transparent", color:T.muted, fontSize:"0.7rem", cursor:"pointer", fontFamily:"'Outfit',sans-serif",
+              <button onClick={() => {
+                // Clear cache so user can re-generate a fresher clip
+                Storage.set(videoCacheKey(ex.id), null);
+                setVidState("idle"); setVideoUrl(null);
+              }} style={{
+                marginTop:8, width:"100%", padding:"8px 0", borderRadius:10,
+                border:"1px solid rgba(255,255,255,0.08)",
+                background:"transparent", color:T.muted, fontSize:"0.7rem",
+                cursor:"pointer", fontFamily:"'Outfit',sans-serif",
               }}>
-                ↺ Regenerate
+                ↺ Generate new clip
               </button>
             </div>
           )}
 
           {vidState === "error" && (
-            <div style={{ textAlign:"center", padding:"8px 0" }}>
-              <div style={{ fontSize:"0.78rem", color:T.red, marginBottom:10 }}>{statusMsg}</div>
-              <button onClick={()=>setVidState("idle")} style={{
-                padding:"8px 20px", borderRadius:10, border:`1px solid ${T.red}44`,
-                background:`${T.red}12`, color:T.red, fontSize:"0.75rem", cursor:"pointer", fontFamily:"'Outfit',sans-serif", fontWeight:700,
-              }}>Try Again</button>
+            <div>
+              {/* Fallback: surface form tips prominently instead of just an error */}
+              <div style={{
+                background:"rgba(255,255,255,0.04)", borderRadius:10,
+                padding:"12px 14px", marginBottom:10,
+              }}>
+                <div style={{ fontSize:"0.68rem", color:T.muted, marginBottom:5, textTransform:"uppercase", letterSpacing:"0.05em" }}>
+                  AI demo unavailable · Form tips instead
+                </div>
+                <div style={{ fontSize:"0.82rem", lineHeight:1.6, color:"rgba(240,238,255,0.8)" }}>
+                  {ex.tip}
+                </div>
+              </div>
+              <button onClick={() => setVidState("idle")} style={{
+                width:"100%", padding:"8px 0", borderRadius:10,
+                border:"1px solid rgba(255,255,255,0.1)",
+                background:"transparent", color:T.muted, fontSize:"0.75rem",
+                cursor:"pointer", fontFamily:"'Outfit',sans-serif", fontWeight:600,
+              }}>
+                Try again
+              </button>
             </div>
           )}
         </div>

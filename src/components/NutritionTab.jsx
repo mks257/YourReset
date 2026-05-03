@@ -1,5 +1,5 @@
 import { T } from "../theme";
-import { NUTRITION_PHASES, getDailyNudge } from "../nutritionEngine";
+import { NUTRITION_PHASES, getDailyNudge, GOAL_NUTRITION, getGoalNudge } from "../nutritionEngine";
 import { PHASE_EMOJI } from "../cycleEngine";
 
 const GENERAL_TIPS = {
@@ -24,13 +24,21 @@ const GENERAL_TIPS = {
 };
 
 function NutritionTab({ cycleState, profile }) {
-  const phase = cycleState?.phase;
-  const data = phase ? NUTRITION_PHASES[phase] : null;
-  const nudge = phase ? getDailyNudge(phase) : null;
+  const isFemaleCycle = profile?.gender === "female" && profile?.cycleTracking;
+  const phase = isFemaleCycle ? cycleState?.phase : null;
+  const goal = profile?.goal || "wellness";
+  
+  const data = phase ? NUTRITION_PHASES[phase] : GOAL_NUTRITION[goal];
+  const nudge = phase ? getDailyNudge(phase) : getGoalNudge(goal);
   const d = data || GENERAL_TIPS;
-  const phaseColor = cycleState?.color || T.teal;
+  
+  const phaseColor = phase ? (cycleState?.color || T.teal) : T.teal;
   const phaseEmoji = phase ? PHASE_EMOJI[phase] : "🥗";
-  const phaseLabel = cycleState?.label || "General Wellness";
+  
+  const goalLabels = { fat_loss: "Fat Loss", strength: "Strength", wellness: "Wellness", endurance: "Endurance" };
+  const phaseLabel = phase ? `${cycleState?.label || ""} Nutrition` : `${goalLabels[goal]} Nutrition`;
+
+  const cravingsTitle = phase ? "🍫 Cravings & Appetite" : "💤 Recovery & Appetite";
 
   return (
     <div className="fu d2">
@@ -39,18 +47,14 @@ function NutritionTab({ cycleState, profile }) {
         <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 10 }}>
           <span style={{ fontSize: "1.5rem" }}>{phaseEmoji}</span>
           <div>
-            <div style={{ fontFamily: "'Outfit',sans-serif", fontWeight: 900, fontSize: "1rem", color: phaseColor }}>{phaseLabel} Nutrition</div>
-            {cycleState && <div style={{ fontSize: "0.68rem", color: T.muted, marginTop: 2 }}>Day {cycleState.dayOfCycle} of {cycleState.cycleLength}</div>}
+            <div style={{ fontFamily: "'Outfit',sans-serif", fontWeight: 900, fontSize: "1rem", color: phaseColor }}>{phaseLabel}</div>
+            {phase && cycleState && <div style={{ fontSize: "0.68rem", color: T.muted, marginTop: 2 }}>Day {cycleState.dayOfCycle} of {cycleState.cycleLength}</div>}
+            {!phase && <div style={{ fontSize: "0.68rem", color: T.muted, marginTop: 2 }}>Goal-based guidance</div>}
           </div>
         </div>
         {nudge && (
           <div style={{ fontSize: "0.82rem", color: "rgba(240,238,255,0.85)", lineHeight: 1.6, padding: "10px 14px", background: `${phaseColor}0d`, borderRadius: 10, fontStyle: "italic" }}>
             "{nudge}"
-          </div>
-        )}
-        {!phase && (
-          <div style={{ fontSize: "0.78rem", color: "rgba(240,238,255,0.65)", lineHeight: 1.6 }}>
-            Enable cycle tracking in your profile to get personalized, phase-synced nutrition guidance. For now, here are evidence-based guidelines for active women.
           </div>
         )}
       </div>
@@ -104,13 +108,13 @@ function NutritionTab({ cycleState, profile }) {
 
       {/* Cravings card */}
       <div style={{ background: T.card, border: `1px solid ${T.pink}22`, borderRadius: 16, padding: "16px 18px", marginBottom: 16 }}>
-        <div style={{ fontFamily: "'Outfit',sans-serif", fontWeight: 800, fontSize: "0.88rem", color: T.pink, marginBottom: 8 }}>🍫 Cravings & Appetite</div>
+        <div style={{ fontFamily: "'Outfit',sans-serif", fontWeight: 800, fontSize: "0.88rem", color: T.pink, marginBottom: 8 }}>{cravingsTitle}</div>
         <div style={{ fontSize: "0.78rem", color: "rgba(240,238,255,0.75)", lineHeight: 1.6 }}>{d.cravings}</div>
       </div>
 
       {/* Meal ideas */}
       <div style={{ background: T.card, border: `1px solid ${T.border}`, borderRadius: 18, padding: "18px 20px" }}>
-        <div style={{ fontFamily: "'Outfit',sans-serif", fontWeight: 800, fontSize: "0.9rem", marginBottom: 14 }}>🍽 Meal Ideas for This Phase</div>
+        <div style={{ fontFamily: "'Outfit',sans-serif", fontWeight: 800, fontSize: "0.9rem", marginBottom: 14 }}>🍽 Meal Ideas</div>
         <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
           {d.mealIdeas.map((meal, i) => (
             <div key={i} style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 12px", background: T.card2, borderRadius: 10 }}>

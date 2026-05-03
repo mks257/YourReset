@@ -111,3 +111,88 @@ export function getDailyNudge(phase) {
   };
   return nudges[phase] || "Eat whole foods, stay hydrated, and listen to your body today.";
 }
+
+export const GOAL_NUTRITION = {
+  fat_loss: {
+    protein: "Aim for 1.8–2.2 g/kg bodyweight. High protein preserves muscle mass while in a calorie deficit and maximizes satiety.",
+    carbs: "Focus on high-fiber, complex carbs. Timing matters: prioritize carbs around your workouts to fuel performance, and lean on veggies and proteins later in the day.",
+    hydration: "Aim for 3+ L/day. Staying fully hydrated aids fat metabolism and prevents confusing thirst for hunger.",
+    keyNutrients: [
+      { name: "Fiber", why: "Slows digestion and increases fullness.", foods: ["Broccoli", "Oats", "Chia seeds", "Lentils", "Berries"] },
+      { name: "Omega-3s", why: "Supports metabolic health and reduces inflammation.", foods: ["Salmon", "Flaxseed", "Walnuts", "Sardines"] },
+      { name: "Green Tea Extract", why: "Contains EGCG which may mildly support fat oxidation.", foods: ["Matcha", "Green tea"] },
+    ],
+    cravings: "When in a deficit, cravings are physiological signals of energy needs. Prioritize protein-dense snacks (like Greek yogurt or a shake) before giving in to cravings. If you still want the treat, have a small portion and move on.",
+    mealIdeas: [
+      "Grilled chicken breast with roasted broccoli and a small sweet potato",
+      "Egg white and spinach scramble with avocado",
+      "Large mixed greens salad with tuna and light vinaigrette",
+      "Protein shake with almond milk and a handful of berries",
+      "Zucchini noodles with lean ground turkey marinara",
+    ],
+  },
+  strength: {
+    protein: "Crucial for hypertrophy: 2.0–2.2 g/kg bodyweight. Distribute evenly across 4-5 meals to maximize muscle protein synthesis.",
+    carbs: "Carbs are muscle-sparing and fuel intense lifting. Aim for moderate-high intake, especially pre- and post-workout.",
+    hydration: "Standard 2–3 L/day, plus 500 ml per intense training hour. Dehydration drops strength output significantly.",
+    keyNutrients: [
+      { name: "Creatine", why: "Enhances ATP regeneration for explosive strength and muscle volume.", foods: ["Beef", "Herring", "(or supplement 5g/day)"] },
+      { name: "Leucine", why: "The key amino acid trigger for muscle protein synthesis.", foods: ["Chicken", "Eggs", "Dairy", "Whey protein"] },
+      { name: "Zinc", why: "Supports testosterone production and tissue repair.", foods: ["Oysters", "Beef", "Pumpkin seeds", "Lentils"] },
+    ],
+    cravings: "Building muscle requires a caloric surplus. If you're constantly hungry or craving high-calorie foods, you might be under-eating. Don't fear healthy fats and complex carbs—they are essential for growth.",
+    mealIdeas: [
+      "Steak with quinoa and asparagus",
+      "Whole wheat turkey wrap with hummus and greens",
+      "Large bowl of oatmeal with whey protein and peanut butter",
+      "Post-workout: Chicken, white rice, and avocado",
+      "Cottage cheese with pineapple and walnuts",
+    ],
+  },
+  wellness: {
+    protein: "Aim for 1.2–1.6 g/kg bodyweight. Enough to maintain lean mass and support daily cellular repair.",
+    carbs: "Focus on whole, unprocessed sources to maintain steady energy levels and support gut microbiome diversity.",
+    hydration: "Aim for 2–2.5 L of water daily. Consistent hydration supports cognitive function and joint health.",
+    keyNutrients: [
+      { name: "Probiotics", why: "Supports a healthy gut microbiome and immune system.", foods: ["Yogurt", "Kefir", "Kimchi", "Kombucha"] },
+      { name: "Vitamin D", why: "Essential for bone health, immune function, and mood.", foods: ["Fortified dairy", "Salmon", "Egg yolks", "(or sunlight)"] },
+      { name: "Magnesium", why: "Supports nervous system calming and over 300 enzyme reactions.", foods: ["Spinach", "Almonds", "Black beans", "Dark chocolate"] },
+    ],
+    cravings: "Cravings are normal. The 80/20 rule applies: 80% whole, nutrient-dense foods, and 20% whatever feeds your soul. No guilt, just balance.",
+    mealIdeas: [
+      "Mediterranean bowl with falafel, greens, cucumber, and tzatziki",
+      "Vegetable frittata with goat cheese",
+      "Salmon and roasted root vegetables",
+      "Smoothie with mixed berries, spinach, and hemp seeds",
+      "Apple slices with almond butter",
+    ],
+  },
+  endurance: {
+    protein: "Aim for 1.4–1.6 g/kg bodyweight to repair tissue damage from repetitive impact and long efforts.",
+    carbs: "The primary fuel source. High intake is necessary. Periodize: very high before and after long efforts, moderate on rest days.",
+    hydration: "Critical. Drink to thirst daily, but during efforts >1 hour, proactively consume fluids with sodium/electrolytes.",
+    keyNutrients: [
+      { name: "Iron", why: "Crucial for oxygen transport. Foot-strike hemolysis can deplete iron in runners.", foods: ["Red meat", "Lentils", "Spinach (with Vitamin C)"] },
+      { name: "Nitrates", why: "Improves blood flow and lowers oxygen cost of exercise.", foods: ["Beets", "Arugula", "Rhubarb"] },
+      { name: "Sodium", why: "The primary electrolyte lost in sweat. Crucial for preventing cramps during long efforts.", foods: ["Salted nuts", "Pickles", "Electrolyte drinks"] },
+    ],
+    cravings: "If you're craving salt, you likely need sodium. If you're craving pure sugar, your glycogen stores are likely depleted. Listen to these signals and fuel appropriately during and after training.",
+    mealIdeas: [
+      "Pre-run: Toast with honey and a banana",
+      "Post-run: Large pasta bowl with turkey meatballs",
+      "Chicken and rice burrito with black beans",
+      "Pancakes with maple syrup and Greek yogurt",
+      "Trail mix with salted pretzels, raisins, and almonds",
+    ],
+  },
+};
+
+export function getGoalNudge(goal) {
+  const nudges = {
+    fat_loss: "Prioritize protein at every meal today to keep your metabolism elevated and stay full.",
+    strength: "Don't skimp on your post-workout carbs today — they're essential for shuttling protein into your muscles.",
+    wellness: "Focus on eating the rainbow today. Aim for at least 3 different colors of vegetables.",
+    endurance: "Hydration starts the day before your long session. Drink an extra glass of water right now.",
+  };
+  return nudges[goal] || "Eat whole foods, stay hydrated, and listen to your body today.";
+}
