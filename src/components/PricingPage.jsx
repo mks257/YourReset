@@ -1,112 +1,214 @@
-import { T } from "../theme";
+export default function PricingPage({ T }) {
+  const PRICING_TIERS = [
+    {
+      id: "free",
+      name: "Free",
+      price: "$0",
+      cadence: "forever",
+      description: "Start with cycle-aware movement and basic tracking.",
+      cta: "Current plan",
+      highlighted: false,
+      features: [
+        "Cycle phase overview",
+        "Sample workouts",
+        "Basic equipment profile",
+        "Limited workout history",
+        "Health snapshot preview"
+      ]
+    },
+    {
+      id: "plus",
+      name: "Reset Plus",
+      price: "$9.99",
+      cadence: "per month",
+      description: "Adaptive workouts, progress tracking, and deeper cycle guidance.",
+      cta: "Start free trial",
+      highlighted: true,
+      features: [
+        "Full adaptive workout plans",
+        "Equipment-aware exercise filtering",
+        "Progressive overload tracker",
+        "Cycle-aware sets, reps, and intensity guidance",
+        "Readiness check-ins",
+        "Nutrition nudges by phase",
+        "Apple Health / Google Fit sync",
+        "Unlimited workout history"
+      ]
+    }
+  ];
 
-const FREE_FEATURES = [
-  "Cycle calendar preview",
-  "3 sample workout days",
-  "Daily readiness check-in",
-  "Equipment filtering",
-  "Step & calorie metrics",
-  "Basic nutrition tips",
-];
+  const TRUST_POINTS = [
+    "Clear renewal date before you subscribe",
+    "Cancel anytime in Settings",
+    "Reminder before annual renewal",
+    "No hidden equipment or coaching fees",
+    "Your health data stays under your control"
+  ];
 
-const PLUS_FEATURES = [
-  "Full 7-day adaptive workout plans",
-  "Cycle-synced training intensity",
-  "Workout logging + progressive overload",
-  "Cycle-aware nutrition guidance",
-  "Equipment substitutions",
-  "AI video demos (Higgsfield)",
-  "All future features included",
-];
-
-const TRUST_SIGNALS = [
-  { icon: "🚫", label: "Cancel anytime" },
-  { icon: "✅", label: "No hidden fees" },
-  { icon: "🔔", label: "Renewal reminders" },
-  { icon: "📱", label: "Data stays on your device" },
-];
-
-function PricingPage({ profile }) {
-  const handleCTA = () => alert("Coming soon! We're still building this. Sign up is free for now — enjoy full access.");
+  const subscriptionStatus = {
+    plan: "Free",
+    trialStatus: "Not started",
+    renewalDate: "—",
+    canCancel: false
+  };
 
   return (
-    <div className="fu d2">
-      {/* Header */}
-      <div style={{ textAlign: "center", marginBottom: 24 }}>
-        <div style={{ fontFamily: "'Outfit',sans-serif", fontWeight: 900, fontSize: "clamp(1.4rem,5vw,1.8rem)", letterSpacing: "-0.03em", marginBottom: 8 }}>
-          Simple, honest pricing
-        </div>
-        <div style={{ fontSize: "0.82rem", color: T.muted, lineHeight: 1.6, maxWidth: 360, margin: "0 auto" }}>
-          No credit card required to start. No dark patterns. We'll remind you 3 days before any renewal.
-        </div>
+    <section style={{ display: "grid", gap: 18 }}>
+      <div>
+        <div style={{ opacity: 0.7, fontSize: 13 }}>Subscription</div>
+        <h1 style={{ margin: "6px 0 8px" }}>Choose your reset</h1>
+        <p style={{ margin: 0, opacity: 0.75, lineHeight: 1.5 }}>
+          Start free, then upgrade when you want adaptive plans, deeper tracking,
+          and phase-aware coaching.
+        </p>
       </div>
 
-      {/* Plan cards */}
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 20 }}>
-        {/* Free plan */}
-        <div style={{ background: T.card, border: `1px solid ${T.border}`, borderRadius: 20, padding: "20px 16px" }}>
-          <div style={{ fontFamily: "'Outfit',sans-serif", fontWeight: 900, fontSize: "1rem", color: T.text, marginBottom: 4 }}>Free</div>
-          <div style={{ fontFamily: "'Outfit',sans-serif", fontWeight: 900, fontSize: "1.6rem", color: T.teal, marginBottom: 4 }}>$0</div>
-          <div style={{ fontSize: "0.65rem", color: T.muted, marginBottom: 16 }}>Forever free</div>
-          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-            {FREE_FEATURES.map(f => (
-              <div key={f} style={{ display: "flex", alignItems: "flex-start", gap: 8, fontSize: "0.75rem", color: "rgba(240,238,255,0.75)" }}>
-                <span style={{ color: T.teal, flexShrink: 0, marginTop: 1 }}>✓</span>
-                {f}
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* Plus plan */}
-        <div style={{ background: `linear-gradient(145deg,${T.card},rgba(180,139,250,0.06))`, border: `1px solid ${T.violet}44`, borderRadius: 20, padding: "20px 16px", position: "relative", overflow: "hidden" }}>
-          <div style={{ position: "absolute", top: 10, right: 10, background: `linear-gradient(135deg,${T.pink},${T.violet})`, borderRadius: 100, padding: "3px 10px", fontSize: "0.58rem", fontWeight: 800, color: "#fff" }}>POPULAR</div>
-          <div style={{ fontFamily: "'Outfit',sans-serif", fontWeight: 900, fontSize: "1rem", color: T.violet, marginBottom: 4 }}>Reset Plus</div>
-          <div style={{ fontFamily: "'Outfit',sans-serif", fontWeight: 900, fontSize: "1.6rem", color: T.violet, marginBottom: 2 }}>$9.99<span style={{ fontSize: "0.75rem", fontWeight: 400, color: T.muted }}>/mo</span></div>
-          <div style={{ fontSize: "0.65rem", color: T.muted, marginBottom: 16 }}>or $79/yr — save 34%</div>
-          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-            {PLUS_FEATURES.map(f => (
-              <div key={f} style={{ display: "flex", alignItems: "flex-start", gap: 8, fontSize: "0.75rem", color: "rgba(240,238,255,0.85)" }}>
-                <span style={{ color: T.violet, flexShrink: 0, marginTop: 1 }}>✓</span>
-                {f}
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
-
-      {/* CTA */}
-      <button onClick={handleCTA} style={{
-        width: "100%", padding: "14px 0", borderRadius: 14, border: "none", cursor: "pointer",
-        background: `linear-gradient(135deg,${T.pink},${T.violet})`,
-        color: "#fff", fontFamily: "'Outfit',sans-serif", fontWeight: 800, fontSize: "0.95rem",
-        boxShadow: `0 6px 24px ${T.pink}44`, marginBottom: 20,
-      }}>
-        Start free — no card required ✨
-      </button>
-
-      {/* Trust signals */}
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 20 }}>
-        {TRUST_SIGNALS.map(s => (
-          <div key={s.label} style={{ background: T.card, border: `1px solid ${T.border}`, borderRadius: 12, padding: "12px 14px", display: "flex", alignItems: "center", gap: 8 }}>
-            <span style={{ fontSize: "1rem" }}>{s.icon}</span>
-            <span style={{ fontSize: "0.75rem", color: "rgba(240,238,255,0.75)", fontWeight: 600 }}>{s.label}</span>
-          </div>
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))",
+          gap: 14
+        }}
+      >
+        {PRICING_TIERS.map((tier) => (
+          <PricingCard key={tier.id} tier={tier} T={T} />
         ))}
       </div>
 
-      {/* Pricing note */}
-      <div style={{ background: T.card, border: `1px solid ${T.teal}22`, borderRadius: 12, padding: "12px 16px", marginBottom: 16, fontSize: "0.75rem", color: "rgba(240,238,255,0.65)", lineHeight: 1.6 }}>
-        <span style={{ color: T.teal, fontWeight: 700 }}>Renewal transparency: </span>
-        We'll send you a reminder 3 days before any subscription renewal. No surprise charges. Cancel in one tap from Settings.
+      <SubscriptionStatusCard T={T} status={subscriptionStatus} />
+
+      <TrustBillingCard T={T} points={TRUST_POINTS} />
+    </section>
+  );
+}
+
+function PricingCard({ tier, T }) {
+  return (
+    <div
+      style={{
+        padding: 18,
+        borderRadius: 26,
+        background: tier.highlighted
+          ? `linear-gradient(135deg, ${T.violet}26, ${T.green}16)`
+          : T.card,
+        border: `1px solid ${tier.highlighted ? T.violet + "66" : T.border}`
+      }}
+    >
+      {tier.highlighted && (
+        <div style={{ fontSize: 12, opacity: 0.8, marginBottom: 8 }}>
+          Best for progress
+        </div>
+      )}
+
+      <h2 style={{ margin: 0 }}>{tier.name}</h2>
+
+      <div style={{ marginTop: 10 }}>
+        <span style={{ fontSize: 34, fontWeight: 800 }}>{tier.price}</span>
+        <span style={{ opacity: 0.65 }}> / {tier.cadence}</span>
       </div>
 
-      {/* Fine print */}
-      <div style={{ fontSize: "0.65rem", color: T.muted, lineHeight: 1.6, textAlign: "center", padding: "0 10px" }}>
-        YourReset provides general wellness and fitness guidance. It is not a medical service and does not provide medical advice, diagnosis, or treatment. Consult a qualified healthcare professional before starting any fitness or nutrition program. Pricing in USD. Subscriptions auto-renew until cancelled.
-      </div>
+      <p style={{ opacity: 0.75, lineHeight: 1.45, marginTop: 12 }}>{tier.description}</p>
+
+      <button
+        style={{
+          width: "100%",
+          padding: "12px 14px",
+          borderRadius: 16,
+          border: "none",
+          marginTop: 16,
+          background: tier.highlighted ? T.violet : T.card2,
+          color: tier.highlighted ? "#fff" : T.text,
+          fontWeight: 700,
+          cursor: "pointer"
+        }}
+      >
+        {tier.cta}
+      </button>
+
+      <ul style={{ paddingLeft: 18, lineHeight: 1.8, marginTop: 24 }}>
+        {tier.features.map((feature) => (
+          <li key={feature} style={{ fontSize: 14, color: "rgba(255,255,255,0.85)" }}>{feature}</li>
+        ))}
+      </ul>
     </div>
   );
 }
 
-export default PricingPage;
+function SubscriptionStatusCard({ T, status }) {
+  return (
+    <div
+      style={{
+        padding: 18,
+        borderRadius: 24,
+        background: T.card,
+        border: `1px solid ${T.border}`
+      }}
+    >
+      <h3 style={{ marginTop: 0, marginBottom: 16 }}>Subscription status</h3>
+
+      <div style={{ display: "grid", gap: 10, fontSize: 14 }}>
+        <Row label="Current plan" value={status.plan} />
+        <Row label="Trial status" value={status.trialStatus} />
+        <Row label="Renewal date" value={status.renewalDate} />
+      </div>
+
+      <button
+        style={{
+          width: "100%",
+          marginTop: 20,
+          padding: "11px 14px",
+          borderRadius: 14,
+          border: `1px solid ${T.border}`,
+          background: T.card2,
+          color: T.text,
+          cursor: "pointer",
+          fontWeight: 600
+        }}
+      >
+        Manage subscription
+      </button>
+      {status.plan === "Free" && (
+        <div style={{ fontSize: 12, opacity: 0.6, marginTop: 14, textAlign: "center" }}>
+          No active paid subscription.
+        </div>
+      )}
+    </div>
+  );
+}
+
+function Row({ label, value }) {
+  return (
+    <div style={{ display: "flex", justifyContent: "space-between", gap: 12 }}>
+      <span style={{ opacity: 0.65 }}>{label}</span>
+      <strong>{value}</strong>
+    </div>
+  );
+}
+
+function TrustBillingCard({ T, points }) {
+  return (
+    <div
+      style={{
+        padding: 18,
+        borderRadius: 24,
+        background: `${T.green}14`,
+        border: `1px solid ${T.green}44`
+      }}
+    >
+      <h3 style={{ marginTop: 0, marginBottom: 12 }}>Billing should feel calm.</h3>
+      <p style={{ opacity: 0.78, lineHeight: 1.5, fontSize: 14, margin: 0 }}>
+        YourReset is designed to avoid the subscription traps users complain
+        about in other fitness apps. You’ll always see your plan, renewal date,
+        and cancel option clearly.
+      </p>
+
+      <div style={{ display: "grid", gap: 10, fontSize: 14, marginTop: 18 }}>
+        {points.map((point) => (
+          <div key={point} style={{ display: "flex", gap: 8 }}>
+            <span style={{ color: T.green }}>✓</span> {point}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}

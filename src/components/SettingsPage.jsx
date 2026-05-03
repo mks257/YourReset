@@ -108,43 +108,45 @@ function SettingsPage({ profile, onSave }) {
       </div>
 
       {/* Section 2: Cycle */}
-      <div style={sectionStyle}>
-        <div style={{ fontFamily: "'Outfit',sans-serif", fontWeight: 800, fontSize: "0.95rem", marginBottom: 16 }}>🌸 Cycle Tracking</div>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
-          <div>
-            <div style={{ fontSize: "0.85rem", fontWeight: 600 }}>Enable cycle-aware training</div>
-            <div style={{ fontSize: "0.68rem", color: T.muted, marginTop: 2 }}>Adapts workouts to your menstrual cycle phase</div>
+      {profile.gender === "female" && (
+        <div style={sectionStyle}>
+          <div style={{ fontFamily: "'Outfit',sans-serif", fontWeight: 800, fontSize: "0.95rem", marginBottom: 16 }}>🌸 Cycle Tracking</div>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
+            <div>
+              <div style={{ fontSize: "0.85rem", fontWeight: 600 }}>Enable cycle-aware training</div>
+              <div style={{ fontSize: "0.68rem", color: T.muted, marginTop: 2 }}>Adapts workouts to your menstrual cycle phase</div>
+            </div>
+            <button onClick={() => setCycleTracking(p => !p)} style={{
+              width: 44, height: 24, borderRadius: 12, border: "none", cursor: "pointer",
+              background: cycleTracking ? T.teal : T.border,
+              position: "relative", transition: "background 0.2s",
+            }}>
+              <div style={{
+                position: "absolute", top: 2, left: cycleTracking ? 22 : 2, width: 20, height: 20,
+                borderRadius: "50%", background: "#fff", transition: "left 0.2s",
+              }} />
+            </button>
           </div>
-          <button onClick={() => setCycleTracking(p => !p)} style={{
-            width: 44, height: 24, borderRadius: 12, border: "none", cursor: "pointer",
-            background: cycleTracking ? T.teal : T.border,
-            position: "relative", transition: "background 0.2s",
-          }}>
-            <div style={{
-              position: "absolute", top: 2, left: cycleTracking ? 22 : 2, width: 20, height: 20,
-              borderRadius: "50%", background: "#fff", transition: "left 0.2s",
-            }} />
-          </button>
-        </div>
-        {cycleTracking && (
-          <>
-            <div style={{ marginBottom: 12 }}>
-              <div style={labelStyle}>Last Period Start Date</div>
-              <input type="date" value={cycleStartDate} onChange={e => setCycleStartDate(e.target.value)} style={inputStyle} />
-            </div>
-            <div style={{ marginBottom: 12 }}>
-              <div style={labelStyle}>Cycle Length (days)</div>
-              <input type="number" min={21} max={40} value={cycleLength} onChange={e => setCycleLength(Number(e.target.value))} style={{ ...inputStyle, width: 100 }} />
-            </div>
-            {currentCycle && (
-              <div style={{ padding: "10px 14px", background: `${currentCycle.color}12`, border: `1px solid ${currentCycle.color}33`, borderRadius: 10, fontSize: "0.75rem" }}>
-                <span style={{ color: currentCycle.color, fontWeight: 700 }}>Current phase: </span>
-                <span style={{ color: "rgba(240,238,255,0.8)" }}>{currentCycle.label} · Day {currentCycle.dayOfCycle}</span>
+          {cycleTracking && (
+            <>
+              <div style={{ marginBottom: 12 }}>
+                <div style={labelStyle}>Last Period Start Date</div>
+                <input type="date" value={cycleStartDate} onChange={e => setCycleStartDate(e.target.value)} style={inputStyle} />
               </div>
-            )}
-          </>
-        )}
-      </div>
+              <div style={{ marginBottom: 12 }}>
+                <div style={labelStyle}>Cycle Length (days)</div>
+                <input type="number" min={21} max={40} value={cycleLength} onChange={e => setCycleLength(Number(e.target.value))} style={{ ...inputStyle, width: 100 }} />
+              </div>
+              {currentCycle && (
+                <div style={{ padding: "10px 14px", background: `${currentCycle.color}12`, border: `1px solid ${currentCycle.color}33`, borderRadius: 10, fontSize: "0.75rem" }}>
+                  <span style={{ color: currentCycle.color, fontWeight: 700 }}>Current phase: </span>
+                  <span style={{ color: "rgba(240,238,255,0.8)" }}>{currentCycle.label} · Day {currentCycle.dayOfCycle}</span>
+                </div>
+              )}
+            </>
+          )}
+        </div>
+      )}
 
       {/* Section 3: Equipment */}
       <div style={sectionStyle}>

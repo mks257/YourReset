@@ -6,6 +6,7 @@ const getPrevWeekKey = Storage.getPrevWeekKey;
 import { getCycleState, PHASES, PHASE_EMOJI, parseSets, buildPhaseNote } from "./cycleEngine";
 import Onboarding from "./Onboarding";
 import SettingsPage from "./components/SettingsPage";
+import PricingPage from "./components/PricingPage";
 
 // ── Theme ──────────────────────────────────────────────────────────────────
 const T = {
@@ -1084,7 +1085,13 @@ export default function App() {
 
         {/* Nav Tabs */}
         <div className="fu d1" style={{ display:"flex", gap:6, marginBottom:20 }}>
-          {[["plan","📋 Plan"], ["metrics","📊 Metrics"], ["cycle","🌸 Cycle"], ["settings","⚙️ Settings"]].map(([k,l])=>(
+          {[
+            ["plan", "📋 Plan"],
+            ["metrics", "📊 Metrics"],
+            profile.gender === "female" ? ["cycle", "🌸 Cycle"] : null,
+            ["settings", "⚙️ Settings"],
+            ["pricing", "💎 Pricing"]
+          ].filter(Boolean).map(([k,l])=>(
             <button key={k} onClick={()=>setTab(k)} style={{
               flex:1, padding:"10px 0", borderRadius:12, border:"none", cursor:"pointer",
               fontFamily:"'Outfit',sans-serif", fontWeight:700, fontSize:"0.78rem",
@@ -1373,6 +1380,13 @@ export default function App() {
         {tab === "settings" && (
           <div className="fu d2">
             <SettingsPage profile={profile} onSave={(p) => { Storage.set('profile', p); setProfile(p); }} />
+          </div>
+        )}
+
+        {/* PRICING TAB */}
+        {tab === "pricing" && (
+          <div className="fu d2">
+            <PricingPage T={T} />
           </div>
         )}
       </div>

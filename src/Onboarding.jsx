@@ -44,6 +44,7 @@ export default function Onboarding({ onComplete }) {
   const [step, setStep] = useState(0);
   const [name, setName] = useState("");
   const [goal, setGoal] = useState("");
+  const [gender, setGender] = useState("");
   const [cycleOption, setCycleOption] = useState(""); // "track" | "none"
   const [cycleStart, setCycleStart] = useState("");
   const [cycleLength, setCycleLength] = useState(28);
@@ -58,7 +59,8 @@ export default function Onboarding({ onComplete }) {
     onComplete({
       name: name.trim() || "You",
       goal,
-      cycleTracking: cycleOption === "track",
+      gender,
+      cycleTracking: cycleOption === "track" && gender === "female",
       cycleStartDate: cycleOption === "track" ? cycleStart : null,
       cycleLength: cycleOption === "track" ? cycleLength : null,
       equipment,
@@ -98,8 +100,43 @@ export default function Onboarding({ onComplete }) {
       >Continue →</button>
     </div>,
 
-    // Step 1: Cycle info
+    // Step 1: Gender
     <div key="step1">
+      <div style={{ fontSize: "2rem", marginBottom: 8 }}>🧑</div>
+      <h2 style={{ fontFamily: "'Outfit',sans-serif", fontWeight: 900, fontSize: "1.4rem", marginBottom: 6 }}>
+        What's your gender?
+      </h2>
+      <p style={{ color: T.muted, fontSize: "0.82rem", marginBottom: 20, lineHeight: 1.6 }}>
+        This helps us tailor your health tracking and physiological baselines.
+      </p>
+      <div style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 20 }}>
+        {[
+          { id: "female", label: "Female", icon: "👩" },
+          { id: "male", label: "Male", icon: "👨" },
+          { id: "other", label: "Non-binary / Other", icon: "🧑" },
+        ].map(opt => (
+          <button key={opt.id} onClick={() => setGender(opt.id)} style={{
+            ...btn(gender === opt.id), justifyContent: "flex-start", padding: "14px 16px",
+          }}>
+            <span style={{ fontSize: "1.2rem" }}>{opt.icon}</span> {opt.label}
+          </button>
+        ))}
+      </div>
+      <div style={{ display: "flex", gap: 8 }}>
+        <button onClick={() => setStep(0)} style={{ flex: 1, padding: "12px 0", borderRadius: 14, border: `1px solid ${T.border}`, background: "transparent", color: T.muted, fontFamily: "'Outfit',sans-serif", fontWeight: 700, cursor: "pointer" }}>← Back</button>
+        <button
+          onClick={() => {
+            if (gender === "female") setStep(2);
+            else { setCycleOption("none"); setStep(3); }
+          }}
+          disabled={!gender}
+          style={{ flex: 2, padding: "12px 0", borderRadius: 14, border: "none", cursor: gender ? "pointer" : "not-allowed", background: gender ? `linear-gradient(135deg,${T.pink},${T.violet})` : T.card2, color: gender ? "#fff" : T.muted, fontFamily: "'Outfit',sans-serif", fontWeight: 800, fontSize: "0.95rem", transition: "all 0.2s" }}
+        >Continue →</button>
+      </div>
+    </div>,
+
+    // Step 2: Cycle info
+    <div key="step2">
       <div style={{ fontSize: "2rem", marginBottom: 8 }}>🌸</div>
       <h2 style={{ fontFamily: "'Outfit',sans-serif", fontWeight: 900, fontSize: "1.4rem", marginBottom: 6 }}>
         Cycle-aware training
@@ -144,7 +181,7 @@ export default function Onboarding({ onComplete }) {
       )}
 
       <div style={{ display: "flex", gap: 8 }}>
-        <button onClick={() => setStep(0)} style={{ flex: 1, padding: "12px 0", borderRadius: 14, border: `1px solid ${T.border}`, background: "transparent", color: T.muted, fontFamily: "'Outfit',sans-serif", fontWeight: 700, cursor: "pointer" }}>← Back</button>
+        <button onClick={() => setStep(1)} style={{ flex: 1, padding: "12px 0", borderRadius: 14, border: `1px solid ${T.border}`, background: "transparent", color: T.muted, fontFamily: "'Outfit',sans-serif", fontWeight: 700, cursor: "pointer" }}>← Back</button>
         <button
           onClick={next}
           disabled={!cycleOption || (cycleOption === "track" && !cycleStart)}
@@ -153,8 +190,8 @@ export default function Onboarding({ onComplete }) {
       </div>
     </div>,
 
-    // Step 2: Equipment
-    <div key="step2">
+    // Step 3: Equipment
+    <div key="step3">
       <div style={{ fontSize: "2rem", marginBottom: 8 }}>🏋️</div>
       <h2 style={{ fontFamily: "'Outfit',sans-serif", fontWeight: 900, fontSize: "1.4rem", marginBottom: 6 }}>
         What equipment do you have?
@@ -170,7 +207,7 @@ export default function Onboarding({ onComplete }) {
         ))}
       </div>
       <div style={{ display: "flex", gap: 8 }}>
-        <button onClick={() => setStep(1)} style={{ flex: 1, padding: "12px 0", borderRadius: 14, border: `1px solid ${T.border}`, background: "transparent", color: T.muted, fontFamily: "'Outfit',sans-serif", fontWeight: 700, cursor: "pointer" }}>← Back</button>
+        <button onClick={() => setStep(gender === "female" ? 2 : 1)} style={{ flex: 1, padding: "12px 0", borderRadius: 14, border: `1px solid ${T.border}`, background: "transparent", color: T.muted, fontFamily: "'Outfit',sans-serif", fontWeight: 700, cursor: "pointer" }}>← Back</button>
         <button
           onClick={finish}
           disabled={equipment.length === 0}
@@ -186,7 +223,7 @@ export default function Onboarding({ onComplete }) {
       <div style={{ width: "100%", maxWidth: 440 }}>
         {/* Progress dots */}
         <div style={{ display: "flex", gap: 6, justifyContent: "center", marginBottom: 28 }}>
-          {[0, 1, 2].map(i => (
+          {[0, 1, 2, 3].map(i => (
             <div key={i} style={{ width: i === step ? 20 : 8, height: 8, borderRadius: 100, background: i <= step ? T.pink : T.card2, transition: "all 0.3s" }} />
           ))}
         </div>
