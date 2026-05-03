@@ -29,6 +29,8 @@ function SettingsPage({ profile, onSave }) {
   const [cycleStartDate, setCycleStartDate] = useState(profile.cycleStartDate || "");
   const [cycleLength, setCycleLength] = useState(profile.cycleLength || 28);
   const [equipment, setEquipment] = useState(profile.equipment || []);
+  const [units, setUnits] = useState(profile.units || "metric");
+  const [healthSync, setHealthSync] = useState(profile.healthSync || false);
   const [clearConfirm, setClearConfirm] = useState(false);
   const [saved, setSaved] = useState(false);
 
@@ -43,7 +45,7 @@ function SettingsPage({ profile, onSave }) {
   };
 
   const handleSave = () => {
-    const updated = { ...profile, name, goal, cycleTracking, cycleStartDate, cycleLength, equipment };
+    const updated = { ...profile, name, goal, cycleTracking, cycleStartDate, cycleLength, equipment, units, healthSync };
     Storage.set('profile', updated);
     onSave(updated);
     setSaved(true);
@@ -157,6 +159,47 @@ function SettingsPage({ profile, onSave }) {
               fontFamily: "'Outfit',sans-serif", fontWeight: 700, fontSize: "0.78rem", cursor: "pointer",
             }}>{e.icon} {e.label}</button>
           ))}
+        </div>
+      </div>
+
+      {/* Section X: Preferences */}
+      <div style={sectionStyle}>
+        <div style={{ fontFamily: "'Outfit',sans-serif", fontWeight: 800, fontSize: "0.95rem", marginBottom: 16 }}>⚙️ Preferences</div>
+        
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
+          <div>
+            <div style={{ fontSize: "0.85rem", fontWeight: 600 }}>Units</div>
+            <div style={{ fontSize: "0.68rem", color: T.muted, marginTop: 2 }}>Choose between metric (kg/cm) and imperial (lb/in)</div>
+          </div>
+          <div style={{ display: "flex", background: T.card2, borderRadius: 10, padding: 2, border: `1px solid ${T.border}` }}>
+            <button onClick={() => setUnits("metric")} style={{
+              padding: "4px 12px", borderRadius: 8, border: "none", cursor: "pointer",
+              background: units === "metric" ? T.teal : "transparent",
+              color: units === "metric" ? "#fff" : T.muted, fontSize: "0.75rem", fontWeight: 700, transition: "all 0.2s"
+            }}>Metric</button>
+            <button onClick={() => setUnits("imperial")} style={{
+              padding: "4px 12px", borderRadius: 8, border: "none", cursor: "pointer",
+              background: units === "imperial" ? T.teal : "transparent",
+              color: units === "imperial" ? "#fff" : T.muted, fontSize: "0.75rem", fontWeight: 700, transition: "all 0.2s"
+            }}>Imperial</button>
+          </div>
+        </div>
+
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          <div>
+            <div style={{ fontSize: "0.85rem", fontWeight: 600 }}>Health Sync</div>
+            <div style={{ fontSize: "0.68rem", color: T.muted, marginTop: 2 }}>Connect Apple Health / Google Fit to sync steps & calories</div>
+          </div>
+          <button onClick={() => setHealthSync(p => !p)} style={{
+            width: 44, height: 24, borderRadius: 12, border: "none", cursor: "pointer",
+            background: healthSync ? T.teal : T.border,
+            position: "relative", transition: "background 0.2s", flexShrink: 0
+          }}>
+            <div style={{
+              position: "absolute", top: 2, left: healthSync ? 22 : 2, width: 20, height: 20,
+              borderRadius: "50%", background: "#fff", transition: "left 0.2s",
+            }} />
+          </button>
         </div>
       </div>
 
