@@ -1,10 +1,29 @@
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, lazy, Suspense } from "react";
 import { createVideoGeneration, pollGeneration, extractVideoUrl } from "../higgsfieldApi";
-import Exercise3DPreview from "./Exercise3DPreview";
-import ExerciseAnimation from "./ExerciseAnimation"; // kept as fallback
 import WorkoutLogger from "./WorkoutLogger";
 import { T } from "../theme";
 import * as Storage from "../storage";
+
+// Three.js is large (~880KB) — lazy-load so it only downloads when a modal opens
+const Exercise3DPreview = lazy(() => import("./Exercise3DPreview"));
+
+// Fallback shown while Three.js chunk is loading (~100–300ms on first open)
+function AvatarSkeleton({ color, height }) {
+  return (
+    <div style={{
+      width: "100%", height, borderRadius: 16, overflow: "hidden",
+      background: `${color}08`,
+      display: "flex", alignItems: "center", justifyContent: "center",
+    }}>
+      <div style={{
+        width: 36, height: 36, borderRadius: "50%",
+        border: `2px solid ${color}33`, borderTopColor: color,
+        animation: "avatar-spin 0.7s linear infinite",
+      }} />
+      <style>{`@keyframes avatar-spin { to { transform: rotate(360deg); } }`}</style>
+    </div>
+  );
+}
 
 // Cache key per exercise — avoids re-generating on every modal open
 const videoCacheKey = (exId) => `hf_vid_${exId}`;
@@ -90,10 +109,12 @@ function ExerciseModal({ ex, dayColor, onClose, onToggleDone, isDone, selectedDa
           color:T.muted, fontSize:"1rem", display:"flex", alignItems:"center", justifyContent:"center"
         }}>✕</button>
 
-        {/* 3D avatar preview — replaces stick figure */}
-        <div style={{ marginBottom: 16, borderRadius: 16, overflow: "hidden", background: `${dayColor}08` }}>
-          <Exercise3DPreview type={ex.anim} color={dayColor} height={230} />
-        </div>
+        {/* 3D avatar — lazy-loaded so Three.js doesn't block initial render */}
+        <Suspense fallback={<AvatarSkeleton color={dayColor} height={230} />}>
+          <div style={{ marginBottom: 16, borderRadius: 16, overflow: "hidden", background: `${dayColor}08` }}>
+            <Exercise3DPreview type={ex.anim} color={dayColor} height={230} />
+          </div>
+        </Suspense>
 
         <div style={{ fontFamily:"'Outfit',sans-serif", fontSize:"1.15rem", fontWeight:800, marginBottom:6 }}>{ex.name}</div>
         <div style={{ display:"flex", gap:8, marginBottom:14, flexWrap:"wrap" }}>

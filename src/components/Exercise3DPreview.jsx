@@ -13,13 +13,36 @@
 import { useRef, useEffect } from "react";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
 
-// Point camera at figure's torso center every render cycle
-function CameraAim() {
+// ── Camera presets per animation category ────────────────────────────────
+// pos: camera world position  target: lookAt point
+const CAMERA_PRESETS = {
+  idle:             { pos: [0,    0.78, 2.55], target: [0, 0.92, 0] },
+  jumping_jacks:    { pos: [0,    0.85, 2.65], target: [0, 0.95, 0] },
+  squat:            { pos: [0.5,  0.72, 2.35], target: [0, 0.70, 0] },
+  squat_jump:       { pos: [0.5,  0.80, 2.35], target: [0, 0.80, 0] },
+  lunge:            { pos: [0.7,  0.75, 2.25], target: [0, 0.70, 0] },
+  hinge:            { pos: [0.9,  0.90, 2.20], target: [0, 0.85, 0] },
+  press_horizontal: { pos: [-0.4, 1.30, 2.10], target: [0, 0.55, 0] }, // side-high: shows lying pose
+  press_overhead:   { pos: [0.4,  0.80, 2.50], target: [0, 1.05, 0] }, // slight side to show arm raise
+  pull_down:        { pos: [0.5,  0.92, 2.30], target: [0, 0.90, 0] },
+  pushup:           { pos: [-2.4, 0.55, 1.60], target: [0, 0.48, 0] }, // side view, low
+  curl:             { pos: [0.5,  0.88, 2.30], target: [0, 0.88, 0] },
+  plank:            { pos: [-2.4, 0.45, 1.50], target: [0, 0.38, 0] }, // low side
+  core_twist:       { pos: [-1.6, 1.00, 2.00], target: [0, 0.70, 0] },
+  core_raise:       { pos: [-1.9, 0.75, 1.80], target: [0, 0.58, 0] },
+  yoga_flow:        { pos: [0,    0.65, 3.10], target: [0, 0.60, 0] }, // wider full-body
+  walk:             { pos: [0.8,  0.80, 2.30], target: [0, 0.82, 0] },
+};
+
+// Apply camera preset for this animation; re-runs only when animKey changes
+function CameraAim({ animKey }) {
   const { camera } = useThree();
   useEffect(() => {
-    camera.lookAt(0, 0.92, 0);
+    const p = CAMERA_PRESETS[animKey] || CAMERA_PRESETS.idle;
+    camera.position.set(...p.pos);
+    camera.lookAt(...p.target);
     camera.updateProjectionMatrix();
-  }, [camera]);
+  }, [camera, animKey]);
   return null;
 }
 
@@ -327,7 +350,7 @@ export default function Exercise3DPreview({ type = "idle", color = "#9bd8b4", he
         style={{ width: "100%", height: "100%" }}
         gl={{ antialias: true, alpha: true }}
       >
-        <CameraAim />
+        <CameraAim animKey={animKey} />
         <ambientLight intensity={0.6} />
         <directionalLight position={[2.5, 5, 2.5]} intensity={0.9} castShadow={false} />
         <pointLight position={[-2, 2.5, -1]} intensity={0.35} color="#b79cff" />
