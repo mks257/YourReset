@@ -218,10 +218,11 @@ function toSchema(ex, phaseOrGoal, phaseIntensity) {
  *   count       — target number of exercises (default 5)
  *   level       — "beginner"|"intermediate"|"expert" (default: all)
  *   seed        — integer seed for deterministic shuffle per day (default: dayIndex)
+ *   excludeIds  — Set of exercise IDs already used on adjacent days
  */
 export function buildDayExercises({
   phase, goal, equipment, muscles, dayCategory,
-  count = 5, level = null, seed = 0,
+  count = 5, level = null, seed = 0, excludeIds = null,
 }) {
   const db = getExerciseDBSync();
   if (!db || db.length === 0) return [];
@@ -237,6 +238,8 @@ export function buildDayExercises({
 
   // Filter
   let candidates = db.filter(ex => {
+    // Exclude exercises already used on adjacent days
+    if (excludeIds && excludeIds.has(ex.id)) return false;
     // Equipment
     if (!allowedEquip.has(ex.equipment)) return false;
     // Category match
@@ -252,6 +255,18 @@ export function buildDayExercises({
     if (level && ex.level !== level) return false;
     return true;
   });
+
+  // If exclusions left us too few, relax them (avoid empty days)
+  if (candidates.length < count && excludeIds) {
+    candidates = db.filter(ex => {
+      if (!allowedEquip.has(ex.equipment)) return false;
+      if (!preferredCats.some(c => ex.category.toLowerCase().includes(c))) return false;
+      if (muscles && muscles.length > 0) {
+        if (!muscles.some(m => ex.primaryMuscles.some(pm => pm.toLowerCase().includes(m.toLowerCase())))) return false;
+      }
+      return true;
+    });
+  }
 
   // Deterministic shuffle per day so exercises don't change on every re-render
   // (uses seeded Fisher-Yates with seed derived from day index + week key)
@@ -281,6 +296,45 @@ export function buildDayExercises({
 
   const phaseOrGoal = phase || goal || "wellness";
   return selected.map(ex => toSchema(ex, phaseOrGoal, phaseIntensity));
+}
+
+// ── Exercise substitution ─────────────────────────────────────────────────
+/**
+ * Find alternative exercises for a given exercise slot.
+ * Matches on same primaryMuscles + user equipment, excludes the current exercise.
+ * Used by the "Find alternatives" substitution UI.
+ */
+export function findAlternatives({ exercise, equipment, count = 5, excludeId = null }) {
+  const db = getExerciseDBSync();
+  if (!db || db.length === 0) return [];
+
+  const allowedEquip = resolveEquipment(equipment);
+  const targetMuscles = exercise.primaryMuscles || [];
+  const targetCat     = exercise.category?.toLowerCase() || "strength";
+
+  const matches = db.filter(ex => {
+    if (ex.id === (excludeId || exercise.id)) return false;
+    if (!allowedEquip.has(ex.equipment)) return false;
+    // Same or compatible category
+    const catMatch = ex.category.toLowerCase() === targetCat ||
+      (targetCat === "strength" && ex.category.toLowerCase() === "powerlifting");
+    if (!catMatch) return false;
+    // Must share at least one primary muscle
+    return targetMuscles.some(m =>
+      ex.primaryMuscles.some(pm => pm.toLowerCase().includes(m.toLowerCase()))
+    );
+  });
+
+  // Prefer same difficulty level, then fill with others
+  const same  = matches.filter(ex => ex.level === exercise.level);
+  const other = matches.filter(ex => ex.level !== exercise.level);
+  const pool  = [...same, ...other].slice(0, count * 4);
+
+  // Random sample without seed (each call gives fresh options)
+  const shuffled = pool.sort(() => Math.random() - 0.5);
+  const selected = shuffled.slice(0, count);
+
+  return selected.map(ex => toSchema(ex, null, "moderate"));
 }
 
 // Seeded pseudo-random shuffle (mulberry32)

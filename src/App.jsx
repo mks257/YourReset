@@ -138,12 +138,13 @@ export default function App() {
             gender={profile?.gender || "female"}
             dbReady={dbReady}
             swapped={swapped}
-            onSwap={(exId) => {
+            onSwap={(exId, explicitSwap) => {
+              // explicitSwap: user-chosen alternative from substitution picker
+              // otherwise: equipment-based swap from SWAP_LIBRARY
               const hasBands = (profile?.equipment || []).includes("bands");
-              // Band-first: prefer band alternative when user has resistance bands
-              // and the exercise has a meaningfully better band swap.
-              // Falls through to bodyweight SWAP_LIBRARY if no band entry exists.
-              const swap = (hasBands && SWAP_LIBRARY_BANDS[exId]) || SWAP_LIBRARY[exId];
+              const swap = explicitSwap
+                || (hasBands && SWAP_LIBRARY_BANDS[exId])
+                || SWAP_LIBRARY[exId];
               if (swap) setSwapped(p => ({ ...p, [`${selectedDay}-${exId}`]: swap }));
             }}
             onUndoSwap={(exId) => setSwapped(p => {

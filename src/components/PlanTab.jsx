@@ -1,8 +1,8 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import ExerciseAnimation from "./ExerciseAnimation";
 import ReadinessCheck from "./ReadinessCheck";
 import { WEEK_PLAN, EQUIPMENT_MAP, SUBSTITUTIONS, SWAP_LIBRARY, DAY_TEMPLATES } from "../workoutData";
-import { buildDayExercises } from "../exerciseLibrary";
+import { buildDayExercises, findAlternatives } from "../exerciseLibrary";
 import { PHASE_EMOJI } from "../cycleEngine";
 
 function chipDate(dayIndex) {
@@ -28,22 +28,42 @@ export default function PlanTab({
   cycleState, profile, weekKey, theme, phaseCopy,
   swapped = {}, onSwap, onUndoSwap, dbReady = false,
 }) {
+  // Substitution state — user-selected alternative for a specific exercise slot
+  const [subbing, setSubbing]       = useState(null);   // { slotId, alternatives[] }
+  const [subSwapped, setSubSwapped] = useState({});     // { slotId: swapExercise }
+
+  // Week number for cross-week exercise variety
+  const weekNum = useMemo(() => {
+    const now = new Date();
+    const jan1 = new Date(now.getFullYear(), 0, 1);
+    return Math.ceil(((now - jan1) / 86400000 + jan1.getDay() + 1) / 7);
+  }, []);
+
   // Dynamic exercises from free-exercise-db when ready; static WEEK_PLAN as fallback
-  const dynamicExercises = useMemo(() => {
+  // Build all 7 days together so we can exclude adjacent-day exercises
+  const allDynamicExercises = useMemo(() => {
     if (!dbReady) return null;
-    const template = DAY_TEMPLATES[selectedDay];
-    if (!template) return null;
-    const generated = buildDayExercises({
-      phase:       cycleState?.phase || null,
-      goal:        profile?.goal || "wellness",
-      equipment:   profile?.equipment || ["bodyweight"],
-      muscles:     template.muscles,
-      dayCategory: template.dayCategory,
-      count:       template.count || 5,
-      seed:        selectedDay * 100 + new Date().getDay(), // stable per day-of-week
+    const result = {};
+    const usedIds = new Set();
+
+    DAY_TEMPLATES.forEach((template, idx) => {
+      const generated = buildDayExercises({
+        phase:       cycleState?.phase || null,
+        goal:        profile?.goal || "wellness",
+        equipment:   profile?.equipment || ["bodyweight"],
+        muscles:     template.muscles,
+        dayCategory: template.dayCategory,
+        count:       template.count || 5,
+        seed:        idx * 100 + weekNum * 1000, // different each week
+        excludeIds:  new Set(usedIds),           // exclude all previous days
+      });
+      generated.forEach(ex => usedIds.add(ex.id));
+      result[idx] = generated.length >= 3 ? generated : null;
     });
-    return generated.length >= 3 ? generated : null; // fall back if too few results
-  }, [dbReady, selectedDay, cycleState?.phase, profile?.goal, profile?.equipment]);
+    return result;
+  }, [dbReady, cycleState?.phase, profile?.goal, profile?.equipment, weekNum]);
+
+  const dynamicExercises = allDynamicExercises?.[selectedDay] ?? null;
 
   const exercises  = dynamicExercises || day.exercises;
   const doneCount  = exercises.filter(e => done[`${selectedDay}-${e.id}`]).length;
@@ -210,14 +230,95 @@ export default function PlanTab({
                   )}
                 </div>
 
-                <div className="exercise-status">
-                  {isDone ? "Done" : "›"}
+                {/* Alternatives button — shown on dynamic exercises when DB is ready */}
+                <div style={{ display:"flex", flexDirection:"column", alignItems:"center", gap:4 }}>
+                  <div className="exercise-status">{isDone ? "Done" : "›"}</div>
+                  {dbReady && !isDone && !isSwapped && (
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        const alts = findAlternatives({
+                          exercise: { ...ex, primaryMuscles: ex.muscle?.split(", ") || [] },
+                          equipment: profile?.equipment || ["bodyweight"],
+                          count: 5,
+                          excludeId: ex.id,
+                        });
+                        setSubbing({ slotId: key, originalEx: ex, alternatives: alts });
+                      }}
+                      title="Find alternatives"
+                      style={{
+                        width:20, height:20, borderRadius:6, border:"1px solid var(--yr-border-soft)",
+                        background:"transparent", color:"var(--yr-faint)", fontSize:11,
+                        cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center",
+                        transition:"color 0.12s",
+                      }}>
+                      ⟳
+                    </button>
+                  )}
                 </div>
               </article>
             );
           })}
         </div>
       </div>
+
+      {/* ── Substitution picker sheet ── */}
+      {subbing && (
+        <div onClick={() => setSubbing(null)} style={{
+          position:"fixed", inset:0, background:"rgba(0,0,0,0.7)",
+          zIndex:200, display:"flex", alignItems:"flex-end",
+          backdropFilter:"blur(6px)",
+        }}>
+          <div onClick={e => e.stopPropagation()} style={{
+            width:"100%", maxWidth:430, margin:"0 auto",
+            background:"var(--yr-bg-soft)", borderRadius:"24px 24px 0 0",
+            padding:"20px 16px 32px", border:"1px solid var(--yr-border)",
+          }}>
+            <div style={{ fontWeight:800, fontSize:15, color:"var(--yr-text)", marginBottom:4 }}>
+              Find an alternative
+            </div>
+            <div style={{ fontSize:12, color:"var(--yr-muted)", marginBottom:14 }}>
+              Replacing: <em>{subbing.originalEx?.name}</em>
+            </div>
+
+            {subbing.alternatives.length === 0 ? (
+              <p style={{ fontSize:13, color:"var(--yr-muted)", textAlign:"center", padding:"20px 0" }}>
+                No alternatives found for your equipment. Try adjusting your equipment in Settings.
+              </p>
+            ) : (
+              <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
+                {subbing.alternatives.map(alt => (
+                  <button key={alt.id}
+                    onClick={() => { onSwap(subbing.originalEx.id, alt); setSubbing(null); }}
+                    style={{
+                      textAlign:"left", padding:"12px 14px", borderRadius:14,
+                      border:"1px solid var(--yr-border)", background:"var(--yr-card)",
+                      cursor:"pointer", transition:"background 0.13s",
+                    }}>
+                    <div style={{ fontWeight:700, fontSize:14, color:"var(--yr-text)", marginBottom:3 }}>{alt.name}</div>
+                    <div style={{ fontSize:12, color:"var(--yr-muted)" }}>{alt.sets} · {alt.muscle}</div>
+                    <div style={{ display:"flex", gap:6, marginTop:5 }}>
+                      <span style={{ fontSize:10, padding:"2px 7px", borderRadius:99,
+                        background:"var(--phase-soft)", color:"var(--phase-accent)", fontWeight:700 }}>
+                        {alt.type}
+                      </span>
+                      <span style={{ fontSize:10, padding:"2px 7px", borderRadius:99,
+                        background:"rgba(242,189,115,0.12)", color:"var(--yr-amber)", fontWeight:700 }}>
+                        {alt.kcal} kcal
+                      </span>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            )}
+
+            <button className="btn-ghost" onClick={() => setSubbing(null)}
+              style={{ width:"100%", marginTop:12, textAlign:"center" }}>
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
