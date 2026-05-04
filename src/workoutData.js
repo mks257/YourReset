@@ -361,3 +361,51 @@ export const WEEK_PLAN = [
     ],
   },
 ];
+
+// ── Day templates for dynamic exercise generation ─────────────────────────
+// Used by exerciseLibrary.buildDayExercises() when the DB is ready.
+// WEEK_PLAN above is the static fallback.
+export const DAY_TEMPLATES = [
+  {
+    day:0, name:"Sunday",    label:"Chest & Upper Body",
+    emoji:"🏋️", focus:"Push + Upper",
+    muscles:["chest","triceps","shoulders"],
+    phase:"follicular", count:6,
+  },
+  {
+    day:1, name:"Monday",    label:"Legs & Glutes",
+    emoji:"🦵", focus:"Lower Body + Glutes",
+    muscles:["quadriceps","glutes","hamstrings","calves"],
+    phase:"follicular", count:6,
+  },
+  {
+    day:2, name:"Tuesday",   label:"Back & Posture",
+    emoji:"💪", focus:"Pull + Posture",
+    muscles:["lats","middle back","traps","biceps"],
+    phase:"follicular", count:5,
+  },
+  {
+    day:3, name:"Wednesday", label:"Active Recovery",
+    emoji:"🧘", focus:"Mobility + Recovery",
+    muscles:["hamstrings","glutes","hips","back"],
+    dayCategory:"stretching", phase:"menstrual", count:5,
+  },
+  {
+    day:4, name:"Thursday",  label:"Shoulders & Arms",
+    emoji:"🔺", focus:"Shoulders + Arms",
+    muscles:["shoulders","biceps","triceps","forearms"],
+    phase:"follicular", count:6,
+  },
+  {
+    day:5, name:"Friday",    label:"Core & HIIT",
+    emoji:"⚡", focus:"Core + Fat Burn",
+    muscles:["abdominals","middle back"],
+    phase:"ovulatory", count:6,
+  },
+  {
+    day:6, name:"Saturday",  label:"Full Body Burn",
+    emoji:"🔥", focus:"Full Body Compound",
+    muscles:["quadriceps","chest","back","glutes","shoulders"],
+    phase:"ovulatory", count:6,
+  },
+];

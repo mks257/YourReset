@@ -1,7 +1,8 @@
 import { useState, useEffect } from "react";
 import * as Storage from "./storage";
 import { getCycleState, PHASE_EMOJI, buildPhaseNote } from "./cycleEngine";
-import { WEEK_PLAN, HEALTH_SNAPSHOT, SWAP_LIBRARY, SWAP_LIBRARY_BANDS } from "./workoutData";
+import { WEEK_PLAN, HEALTH_SNAPSHOT, SWAP_LIBRARY, SWAP_LIBRARY_BANDS, DAY_TEMPLATES } from "./workoutData";
+import { getExerciseDB, isDBReady } from "./exerciseLibrary";
 import Onboarding from "./Onboarding";
 import PlanTab from "./components/PlanTab";
 import MetricsTab from "./components/MetricsTab";
@@ -80,6 +81,13 @@ export default function App() {
   useEffect(() => { Storage.set(`swaps_${weekKey}`, swapped); }, [swapped, weekKey]);
   useEffect(() => { if (readiness) Storage.set(`readiness_${Storage.getTodayKey()}`, readiness); }, [readiness]);
 
+  // Kick off DB fetch in background on mount — module cache means this only runs once
+  const [dbReady, setDbReady] = useState(false);
+  useEffect(() => {
+    if (isDBReady()) { setDbReady(true); return; }
+    getExerciseDB().then(() => setDbReady(true));
+  }, []);
+
   useEffect(() => {
     const id = setInterval(() => {
       setLiveData(p => ({
@@ -128,6 +136,7 @@ export default function App() {
             cycleState={cycleState} profile={profile} weekKey={weekKey}
             theme={theme} phaseCopy={phaseCopy} liveData={liveData}
             gender={profile?.gender || "female"}
+            dbReady={dbReady}
             swapped={swapped}
             onSwap={(exId) => {
               const hasBands = (profile?.equipment || []).includes("bands");

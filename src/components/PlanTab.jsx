@@ -1,6 +1,8 @@
+import { useMemo } from "react";
 import ExerciseAnimation from "./ExerciseAnimation";
 import ReadinessCheck from "./ReadinessCheck";
-import { WEEK_PLAN, EQUIPMENT_MAP, SUBSTITUTIONS, SWAP_LIBRARY } from "../workoutData";
+import { WEEK_PLAN, EQUIPMENT_MAP, SUBSTITUTIONS, SWAP_LIBRARY, DAY_TEMPLATES } from "../workoutData";
+import { buildDayExercises } from "../exerciseLibrary";
 import { PHASE_EMOJI } from "../cycleEngine";
 
 function chipDate(dayIndex) {
@@ -24,14 +26,32 @@ export default function PlanTab({
   day, selectedDay, setSelectedDay, done, setDone, setModal,
   readiness, showReadiness, setReadiness, setShowReadiness,
   cycleState, profile, weekKey, theme, phaseCopy,
-  swapped = {}, onSwap, onUndoSwap,
+  swapped = {}, onSwap, onUndoSwap, dbReady = false,
 }) {
-  const doneCount  = day.exercises.filter(e => done[`${selectedDay}-${e.id}`]).length;
-  const totalKcal  = day.exercises.reduce((a, e) => a + e.kcal, 0);
-  const burnedKcal = day.exercises.filter(e => done[`${selectedDay}-${e.id}`]).reduce((a, e) => a + e.kcal, 0);
-  const pct        = Math.round((doneCount / day.exercises.length) * 100);
-  const estMin     = Math.round(day.exercises.length * 4.5);
-  const avatarEx   = pickAvatar(day.exercises);
+  // Dynamic exercises from free-exercise-db when ready; static WEEK_PLAN as fallback
+  const dynamicExercises = useMemo(() => {
+    if (!dbReady) return null;
+    const template = DAY_TEMPLATES[selectedDay];
+    if (!template) return null;
+    const generated = buildDayExercises({
+      phase:       cycleState?.phase || null,
+      goal:        profile?.goal || "wellness",
+      equipment:   profile?.equipment || ["bodyweight"],
+      muscles:     template.muscles,
+      dayCategory: template.dayCategory,
+      count:       template.count || 5,
+      seed:        selectedDay * 100 + new Date().getDay(), // stable per day-of-week
+    });
+    return generated.length >= 3 ? generated : null; // fall back if too few results
+  }, [dbReady, selectedDay, cycleState?.phase, profile?.goal, profile?.equipment]);
+
+  const exercises  = dynamicExercises || day.exercises;
+  const doneCount  = exercises.filter(e => done[`${selectedDay}-${e.id}`]).length;
+  const totalKcal  = exercises.reduce((a, e) => a + e.kcal, 0);
+  const burnedKcal = exercises.filter(e => done[`${selectedDay}-${e.id}`]).reduce((a, e) => a + e.kcal, 0);
+  const pct        = Math.round((doneCount / exercises.length) * 100);
+  const estMin     = Math.round(exercises.length * 4.5);
+  const avatarEx   = pickAvatar(exercises);
 
   return (
     <div className="screen-stack">
@@ -72,7 +92,7 @@ export default function PlanTab({
 
       {/* ── Inline stat strip — no boxes ── */}
       <div className="stats-strip fade-in">
-        <strong>{doneCount}/{day.exercises.length}</strong>
+        <strong>{doneCount}/{exercises.length}</strong>
         <span>exercises</span>
         <span className="sep">·</span>
         <strong style={{ color:"var(--yr-amber)" }}>{burnedKcal}</strong>
@@ -104,11 +124,14 @@ export default function PlanTab({
       <div>
         <div className="section-header">
           <h2 className="section-title">Up next</h2>
-          <span style={{ fontSize:12, color:"var(--yr-muted)" }}>{day.exercises.length} exercises · ~{estMin} min</span>
+          <span style={{ fontSize:12, color:"var(--yr-muted)" }}>
+            {exercises.length} exercises · ~{estMin} min
+            {dynamicExercises && <span style={{ color:"var(--phase-accent)", marginLeft:6, fontSize:10, fontWeight:700 }}>✦ personalised</span>}
+          </span>
         </div>
 
         <div className="exercise-list" style={{ marginTop:10 }}>
-          {day.exercises.map((ex, i) => {
+          {exercises.map((ex, i) => {
             const key      = `${selectedDay}-${ex.id}`;
             const isDone   = !!done[key];
             const swapEx   = swapped[key];           // replacement exercise if swapped
