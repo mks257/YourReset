@@ -1,86 +1,82 @@
-import { T } from "../theme";
+import { useCountUp } from "./MotionHooks";
 
-const Ring = ({ pct, size=110, stroke=9, color, val, unit }) => {
-  const r = (size - stroke) / 2;
-  const circ = 2 * Math.PI * r;
-  return (
-    <div style={{ position:"relative", width:size, height:size, flexShrink:0 }}>
-      <svg width={size} height={size} style={{ transform:"rotate(-90deg)" }}>
-        <circle cx={size/2} cy={size/2} r={r} fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth={stroke} />
-        <circle cx={size/2} cy={size/2} r={r} fill="none" stroke={color} strokeWidth={stroke}
-          strokeLinecap="round" strokeDasharray={circ} strokeDashoffset={circ * (1 - pct/100)}
-          style={{ transition:"stroke-dashoffset 1s cubic-bezier(.4,0,.2,1)" }} />
-      </svg>
-      <div style={{ position:"absolute", top:"50%", left:"50%", transform:"translate(-50%,-50%)", textAlign:"center" }}>
-        <div style={{ fontFamily:"'Outfit',sans-serif", fontWeight:800, fontSize:"1.1rem", color, lineHeight:1 }}>{val}</div>
-        <div style={{ fontSize:"0.55rem", color:T.muted, textTransform:"uppercase", letterSpacing:"0.06em", marginTop:2 }}>{unit}</div>
-      </div>
-    </div>
-  );
-};
+const STEP_HISTORY = [3.2,4.1,5.5,6.8,3.9,7.2,8.1,4.5,5.6,3.8,4.4,7.5,2.9,4.1,5.8,3.3,5.0,7.1,8.5,4.2,5.0,6.1,3.7,4.8,5.5,7.9,3.4,4.7,5.3,4.0,9.2,5.9];
 
-const SparkBars = ({ vals, color, goal }) => {
-  const mx = Math.max(...vals, goal || 0);
-  return (
-    <div style={{ display:"flex", alignItems:"flex-end", gap:2, height:48, width:"100%" }}>
-      {vals.map((v,i) => {
-        const h = Math.max(2, (v/mx)*48);
-        const isLast = i === vals.length-1;
-        const hit = goal && v >= goal;
-        return (
-          <div key={i} title={v.toLocaleString()}
-            style={{ flex:1, height:h, borderRadius:"2px 2px 0 0",
-              background: isLast ? color : hit ? T.teal : "rgba(255,255,255,0.08)",
-              transition:"height 0.4s ease", cursor:"default" }} />
-        );
-      })}
-    </div>
-  );
-};
+export default function MetricsTab({ liveData, motion = "full" }) {
+  const animOn = motion !== "off";
+  const today = new Date().toLocaleDateString("en-US", { weekday:"short", month:"short", day:"numeric" });
 
-function MetricsTab({ liveData }) {
-  const stepPct = Math.min(100, Math.round((liveData.steps / liveData.stepGoal) * 100));
-  const kcalPct = Math.min(100, Math.round((liveData.kcal / liveData.kcalGoal) * 100));
+  const stepsAnim  = useCountUp(liveData?.steps || 0,  { duration:1100, enabled:animOn });
+  const kcalAnim   = useCountUp(liveData?.kcal  || 0,  { duration:900,  delay:60, enabled:animOn });
+
+  const rows = [
+    { label:"Steps",          value: animOn ? stepsAnim.toLocaleString() : (liveData?.steps||0).toLocaleString(), unit:"", goal: liveData?.stepGoal||10000, pct: (liveData?.steps||0)/(liveData?.stepGoal||10000) },
+    { label:"Active kcal",    value: animOn ? kcalAnim : (liveData?.kcal||0), unit:"kcal", goal:liveData?.kcalGoal||500, pct:(liveData?.kcal||0)/(liveData?.kcalGoal||500) },
+    { label:"Exercise",       value: liveData?.exMin||22, unit:"min", goal:30, pct:(liveData?.exMin||22)/30 },
+    { label:"Resting HR",     value: liveData?.rhr||70,   unit:"bpm", goal:75, pct: 0.82 },
+    { label:"Weight",         value: liveData?.weight||63.5, unit:"kg", goal:liveData?.weightGoal||60, pct: 0.78 },
+    { label:"Energy deficit", value: Math.max(0, (liveData?.kcal||0) - 150), unit:"kcal", goal:"", pct: 0.35 },
+  ];
+
+  const maxBar = Math.max(...STEP_HISTORY);
+  const avgSteps = Math.round(STEP_HISTORY.reduce((a,b)=>a+b,0)/STEP_HISTORY.length * 1000);
 
   return (
-    <div className="fu d2">
-      <div style={{ display:"flex", gap:12, justifyContent:"center", flexWrap:"wrap", background:T.card, border:`1px solid ${T.border}`, borderRadius:20, padding:"22px", marginBottom:16 }}>
-        <Ring pct={stepPct} color={T.amber} val={liveData.steps.toLocaleString()} unit="Steps" />
-        <Ring pct={kcalPct} color={T.pink} val={liveData.kcal} unit="Active kcal" />
-        <Ring pct={Math.round((liveData.exMin/60)*100)} color={T.violet} val={liveData.exMin+"m"} unit="Exercise" />
-        <Ring pct={68} color={T.red} val={liveData.rhr} unit="Resting HR" />
+    <div className="yr-stack-lg">
+      <div className={animOn ? "yr-stagger" : ""} style={{"--i":0}}>
+        <div className="yr-overline">{today}</div>
+        <h1 className="yr-display" style={{ fontSize:"clamp(32px,5vw,56px)", fontWeight:500, letterSpacing:"-0.03em", margin:0, lineHeight:1.05 }}>
+          A measured day.
+        </h1>
+        <p style={{ color:"var(--yr-muted)", fontSize:14, maxWidth:"52ch", marginTop:8 }}>
+          You're tracking close to baseline. Steps trending up, resting HR steady.
+        </p>
       </div>
 
-      <div style={{ background:T.card, border:`1px solid ${T.border}`, borderRadius:20, padding:"20px", marginBottom:16 }}>
-        <div style={{ fontFamily:"'Outfit',sans-serif", fontWeight:800, fontSize:"0.9rem", marginBottom:14, display:"flex", justifyContent:"space-between", alignItems:"center" }}>
-          <span>👣 Step History</span>
-          <span style={{ fontFamily:"'JetBrains Mono',monospace", fontSize:"0.7rem", color:T.muted }}>
-            avg {Math.round([3752,5755,6843,3890,11607,9595,10067,5694,3144,5659,4273,11707,12390,7322].reduce((a,b)=>a+b)/14).toLocaleString()}
-          </span>
-        </div>
-        <SparkBars vals={[3752,5755,6843,3890,11607,9595,10067,5694,3144,5659,4273,11707,12390,7322,1006,11642,8662,4124,1066,1123,536,435,2784,9194,10731,3364,3575,3449,17556,liveData.steps]} color={T.amber} goal={10000} />
-        <div style={{ display:"flex", justifyContent:"space-between", marginTop:6, fontSize:"0.58rem", color:T.muted }}>
-          <span>Mar 14</span><span style={{ color:T.amber, fontWeight:700 }}>Today</span>
-        </div>
-      </div>
-
-      <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:12 }}>
-        {[
-          { label:"Weight", val:"63.5 kg", color:T.teal, icon:"⚖️", sub:"Goal: 60 kg" },
-          { label:"Resting HR", val:`${liveData.rhr} bpm`, color:"#fc8181", icon:"❤️", sub:"30d avg: 75" },
-          { label:"BMR Estimate", val:"~1,450 kcal", color:T.violet, icon:"⚡", sub:"25F, 63.5 kg" },
-          { label:"Deficit Today", val:`~${Math.max(0, liveData.kcal-150)} kcal`, color:T.green, icon:"📉", sub:"Keep going!" },
-        ].map(m=>(
-          <div key={m.label} style={{ background:T.card, border:`1px solid ${T.border}`, borderRadius:16, padding:"16px 18px" }}>
-            <div style={{ fontSize:"1rem", marginBottom:8 }}>{m.icon}</div>
-            <div style={{ fontFamily:"'Outfit',sans-serif", fontWeight:900, fontSize:"1.5rem", color:m.color }}>{m.val}</div>
-            <div style={{ fontSize:"0.65rem", color:T.muted, textTransform:"uppercase", letterSpacing:"0.05em", marginTop:3 }}>{m.label}</div>
-            <div style={{ fontSize:"0.68rem", color:"rgba(240,238,255,0.35)", marginTop:4 }}>{m.sub}</div>
+      <div className="yr-ledger">
+        {rows.map((r, i) => (
+          <div className={`yr-ledger-row${animOn ? " yr-anim-ledger-row" : ""}`} key={r.label} style={{"--i":i}}>
+            <div className="yr-ledger-label">{r.label}</div>
+            <div>
+              <div className="yr-ledger-value">
+                {r.value}<span className="yr-ledger-value-unit">{r.unit}</span>
+              </div>
+              <div className="yr-ledger-bar">
+                <div className={`yr-ledger-bar-fill${animOn ? " yr-anim-bar" : ""}`}
+                  style={{ width:`${Math.min(100, r.pct * 100)}%`, "--i":i }} />
+              </div>
+            </div>
+            <div className="yr-ledger-meta">
+              {r.goal ? <>goal <b style={{ color:"var(--yr-text)" }}>{r.goal}</b></> : "—"}
+            </div>
           </div>
         ))}
+      </div>
+
+      <div className={animOn ? "yr-stagger" : ""} style={{"--i":8}}>
+        <div className="yr-overline" style={{ display:"flex", justifyContent:"space-between" }}>
+          <span>30-day step trend</span>
+        </div>
+        <div style={{ display:"flex", alignItems:"flex-end", gap:3, height:100, margin:"12px 0" }}>
+          {STEP_HISTORY.map((v, i) => (
+            <div key={i}
+              className={animOn ? "yr-anim-spark-bar" : ""}
+              style={{
+                flex:1, height:`${(v/maxBar)*100}%`, minHeight:3,
+                background: i===STEP_HISTORY.length-1 ? "var(--phase-accent)" : "var(--yr-text-2)",
+                opacity: i===STEP_HISTORY.length-1 ? 1 : (v>7 ? 0.5 : 0.2),
+                borderRadius:1, "--i":i,
+              }}
+              title={`${(v*1000).toFixed(0)} steps`}
+            />
+          ))}
+        </div>
+        <div style={{ display:"flex", justifyContent:"space-between", fontSize:11, color:"var(--yr-muted)", fontFamily:"var(--font-mono)" }}>
+          <span>MAR 14</span>
+          <span>AVG {avgSteps.toLocaleString()}</span>
+          <span style={{ color:"var(--phase-accent)" }}>TODAY</span>
+        </div>
       </div>
     </div>
   );
 }
-
-export default MetricsTab;

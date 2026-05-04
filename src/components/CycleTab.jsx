@@ -1,321 +1,172 @@
 import { useState, useEffect, useRef } from "react";
-import { PHASES, PHASE_EMOJI, PCOS_GUIDANCE, getPhaseWindows, phaseLabel } from "../cycleEngine";
+import { PHASES, PHASE_EMOJI, PCOS_GUIDANCE, getPhaseWindows } from "../cycleEngine";
+import { useCountUp } from "./MotionHooks";
 
-// ── Phase card — expanded with science-honest content ─────────────────────
-function PhaseCard({ phaseKey, isNow, windows, cycleLength }) {
-  const [open, setOpen] = useState(isNow);
-  const p = PHASES[phaseKey];
-  const dayRange = phaseLabel(windows, phaseKey, cycleLength);
-  if (!p) return null;
-
-  return (
-    <div
-      onClick={() => setOpen(o => !o)}
-      style={{
-        borderRadius: 16, padding: "14px 16px", marginBottom: 8, cursor: "pointer",
-        background: `${p.color}0f`,
-        border: `1px solid ${p.color}${isNow ? "55" : "30"}`,
-        borderLeft: `3px solid ${p.color}`,
-        opacity: isNow ? 1 : 0.78,
-        transition: "opacity 0.15s",
-      }}>
-      <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start" }}>
-        <div>
-          <div style={{ fontWeight:800, fontSize:"0.88rem", color: p.color }}>
-            {PHASE_EMOJI[phaseKey]} {p.label}
-            {isNow && <span style={{ marginLeft:8, fontSize:"0.65rem", fontWeight:600, opacity:0.7 }}>← you're here</span>}
-          </div>
-          <div style={{ fontSize:"0.65rem", color:"var(--yr-muted)", marginTop:2 }}>
-            {dayRange} · {p.setsReps}
-          </div>
-        </div>
-        <span style={{ fontSize:11, color:"var(--yr-muted)", marginTop:2 }}>{open ? "▲" : "▾"}</span>
-      </div>
-
-      {open && (
-        <div style={{ marginTop:10 }}>
-          {/* Main tip */}
-          <p style={{ fontSize:"0.78rem", lineHeight:1.6, color:"rgba(245,240,240,0.82)", marginBottom:10 }}>
-            {p.tip}
-          </p>
-
-          {/* Honest caveat (follicular) */}
-          {p.honestCaveat && (
-            <div style={{ padding:"8px 12px", borderRadius:8, marginBottom:10,
-              background:"rgba(255,255,255,0.04)", border:"1px solid rgba(255,255,255,0.08)",
-              fontSize:"0.72rem", color:"var(--yr-muted)", lineHeight:1.55 }}>
-              📊 {p.honestCaveat}
-            </div>
-          )}
-
-          {/* ACL note (ovulatory) */}
-          {p.aclNote && (
-            <div style={{ padding:"8px 12px", borderRadius:8, marginBottom:10,
-              background:"rgba(242,189,115,0.08)", border:"1px solid rgba(242,189,115,0.22)",
-              fontSize:"0.72rem", color:"var(--yr-amber)", lineHeight:1.55 }}>
-              ⚠️ {p.aclNote}
-            </div>
-          )}
-
-          {/* Deload note (luteal late) */}
-          {p.deloadNote && (
-            <div style={{ padding:"8px 12px", borderRadius:8, marginBottom:10,
-              background:"rgba(139,127,168,0.1)", border:"1px solid rgba(139,127,168,0.24)",
-              fontSize:"0.72rem", color:"#c4b8e0", lineHeight:1.55 }}>
-              💡 {p.deloadNote}
-            </div>
-          )}
-
-          {/* Workout chips */}
-          <div style={{ display:"flex", gap:6, flexWrap:"wrap", marginBottom:10 }}>
-            {p.workouts.map(w => (
-              <span key={w} style={{ fontSize:"0.62rem", padding:"3px 9px", borderRadius:99,
-                background:`${p.color}25`,
-                color: p.color, fontWeight:700 }}>{w}</span>
-            ))}
-          </div>
-
-          {/* Nutrition */}
-          <div style={{ fontSize:"0.72rem", color:"var(--yr-amber)", lineHeight:1.5, marginBottom:8 }}>
-            🍽 {p.nutrition}
-          </div>
-
-          {/* Science source — brief */}
-          <div style={{ fontSize:"0.62rem", color:"var(--yr-faint)", lineHeight:1.5, fontStyle:"italic" }}>
-            {p.science}
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
-
-// ── Main component ────────────────────────────────────────────────────────
-// ── Cycle length stepper ──────────────────────────────────────────────────
-function CycleLengthPicker({ value, onChange }) {
-  // useRef tracks value synchronously — rapid taps accumulate before React re-renders
-  const cur = useRef(value);
-  const [displayed, setDisplayed] = useState(value);
-  useEffect(() => { cur.current = value; setDisplayed(value); }, [value]);
-
-  const step = (delta) => {
-    const next = Math.min(45, Math.max(21, cur.current + delta));
-    cur.current = next;
-    setDisplayed(next);   // triggers display re-render
-    onChange(next);       // persists to profile
-  };
-  const btnStyle = {
-    width:28, height:28, borderRadius:8, border:"1px solid var(--yr-border)",
-    background:"rgba(255,255,255,0.06)", color:"var(--yr-text)", fontSize:16,
-    fontWeight:700, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center",
-    lineHeight:1, transition:"background 0.12s",
-  };
-  return (
-    <div style={{ display:"flex", alignItems:"center", gap:10, padding:"12px 14px",
-      background:"var(--yr-card)", border:"1px solid var(--yr-border)", borderRadius:14 }}>
-      <div style={{ flex:1 }}>
-        <div style={{ fontWeight:700, fontSize:13, color:"var(--yr-text)" }}>My cycle length</div>
-        <div style={{ fontSize:11, color:"var(--yr-muted)", marginTop:1 }}>Typical range: 21–45 days · 95% of cycles</div>
-      </div>
-      <div style={{ display:"flex", alignItems:"center", gap:8 }}>
-        <button style={btnStyle} onClick={() => step(-1)}>−</button>
-        <span style={{ fontWeight:900, fontSize:18, color:"var(--phase-accent)", minWidth:52, textAlign:"center", letterSpacing:"-0.03em" }}>
-          {displayed} <span style={{ fontSize:11, fontWeight:500, color:"var(--yr-muted)" }}>days</span>
-        </span>
-        <button style={btnStyle} onClick={() => step(+1)}>+</button>
-      </div>
-    </div>
-  );
-}
-
-export default function CycleTab({ cycleState, profile, onResetProfile, onUpdateProfile }) {
+export default function CycleTab({ cycleState, profile, onResetProfile, onUpdateProfile, motion = "full" }) {
   const [showPcos, setShowPcos] = useState(false);
+  const animOn = motion !== "off";
+  const fullMotion = motion === "full";
 
   const cycleLength = cycleState?.cycleLength || profile?.cycleLength || 28;
-  const windows     = cycleState?.windows || getPhaseWindows(cycleLength);
-  const isOnContraception = profile?.cycleOption === "none" ||
-    (profile?.cycleTracking === false && profile?.gender === "female");
+  const today       = cycleState?.dayOfCycle || 1;
+  const ovulationDay = cycleLength - 14;
+  const todayAnim   = useCountUp(today, { duration:800, enabled:animOn });
 
-  const PHASE_KEYS = ["menstrual","follicular","ovulatory","luteal_early","luteal_late"];
-  const phaseColors = {
-    menstrual: PHASES.menstrual.color, follicular: PHASES.follicular.color,
-    ovulatory: PHASES.ovulatory.color, luteal_early: PHASES.luteal_early.color,
-    luteal_late: PHASES.luteal_late.color,
+  function phaseColorOf(d) {
+    if (d <= 5) return "var(--phase-menstrual)";
+    if (d < ovulationDay) return "var(--phase-follicular)";
+    if (d <= ovulationDay + 2) return "var(--phase-ovulatory)";
+    return "var(--phase-luteal)";
+  }
+
+  const phaseWindows = cycleState?.windows || getPhaseWindows(cycleLength);
+  const phaseList = [
+    { label:"Menstrual",    range:`Days 1–5`,                         color:"var(--phase-menstrual)" },
+    { label:"Follicular",   range:`Days 6–${ovulationDay-1}`,         color:"var(--phase-follicular)" },
+    { label:"Ovulatory",    range:`Days ${ovulationDay}–${ovulationDay+2}`, color:"var(--phase-ovulatory)" },
+    { label:"Luteal early", range:`Days ${ovulationDay+3}–${ovulationDay+9}`, color:"var(--phase-luteal)" },
+    { label:"Luteal late",  range:`Days ${ovulationDay+10}–${cycleLength}`,    color:"var(--phase-luteal)" },
+  ];
+
+  // Cycle length stepper
+  const cur = useRef(cycleLength);
+  const [displayed, setDisplayed] = useState(cycleLength);
+  useEffect(() => { cur.current = cycleLength; setDisplayed(cycleLength); }, [cycleLength]);
+  const step = (delta) => {
+    const next = Math.min(45, Math.max(21, cur.current + delta));
+    cur.current = next; setDisplayed(next);
+    if (onUpdateProfile) {
+      const current = JSON.parse(localStorage.getItem("yr_profile") || "{}");
+      const p = { ...current, cycleLength: next };
+      localStorage.setItem("yr_profile", JSON.stringify(p));
+      onUpdateProfile({ cycleLength: next });
+    }
   };
 
+  if (!cycleState) {
+    return (
+      <div className="yr-stack-lg">
+        <div>
+          <div className="yr-overline">Cycle tracking</div>
+          <h1 className="yr-display" style={{ fontSize:"clamp(32px,5vw,52px)", fontWeight:500, letterSpacing:"-0.03em", margin:0 }}>
+            Not enabled.
+          </h1>
+          <p style={{ color:"var(--yr-muted)", fontSize:14, marginTop:8, maxWidth:"50ch" }}>
+            Cycle-aware programming adapts your workouts to your hormonal phase. Update your profile to enable it.
+          </p>
+          <button onClick={onResetProfile} style={{ marginTop:16, background:"transparent", border:"1px solid var(--yr-border)", borderRadius:999, padding:"10px 20px", color:"var(--yr-text)", cursor:"pointer", fontFamily:"inherit" }}>
+            Update profile
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className="screen-stack" style={{ paddingTop:4 }}>
-
-      {/* ── Current phase hero ── */}
-      {cycleState ? (
-        <div className="phase-card fade-in" style={{
-          background:`${cycleState.color}16`,
-          border:`1px solid ${cycleState.color}44`,
-        }}>
-          <div className="phase-eyebrow" style={{ color: cycleState.color }}>
-            {PHASE_EMOJI[cycleState.phase]} You're in {cycleState.label}
-          </div>
-          <h2 style={{ fontSize:18, fontWeight:700, color:"var(--yr-text)", margin:"6px 0 6px" }}>
-            Day {cycleState.dayOfCycle} of {cycleLength}
-          </h2>
-          <p style={{ fontSize:13, color:"var(--yr-muted)", lineHeight:1.5, marginBottom:10 }}>
-            {cycleState.tip}
-          </p>
-          <div style={{ display:"flex", gap:8, flexWrap:"wrap" }}>
-            {[["Intensity", cycleState.intensity],["Sets/Reps", cycleState.setsReps],["Cardio", cycleState.cardio]].map(([l,v])=>(
-              <div key={l} style={{ background:`${cycleState.color}1e`,
-                border:`1px solid ${cycleState.color}38`,
-                borderRadius:10, padding:"5px 10px", fontSize:"0.68rem" }}>
-                <span style={{ color:"var(--yr-muted)" }}>{l}: </span>
-                <span style={{ color: cycleState.color, fontWeight:700 }}>{v}</span>
-              </div>
-            ))}
-          </div>
-          {/* Phase confidence — calendar estimate */}
-          <div style={{ marginTop:10, fontSize:"0.62rem", color:"var(--yr-faint)", display:"flex", alignItems:"center", gap:5 }}>
-            <span>📅</span>
-            <span>Calendar estimate · based on your reported start date · may vary ±2–4 days</span>
-          </div>
+    <div className="yr-stack-lg">
+      <div>
+        <div className="yr-overline">{cycleState.label}</div>
+        <h1 className="yr-display" style={{ fontSize:"clamp(32px,5vw,52px)", fontWeight:500, letterSpacing:"-0.03em", margin:0 }}>
+          {cycleState.phase === "follicular" ? "A strong window." :
+           cycleState.phase === "ovulatory"  ? "Peak power." :
+           cycleState.phase === "menstrual"  ? "Restore and rest." : "Stabilize your gains."}
+        </h1>
+        <p style={{ color:"var(--yr-muted)", fontSize:14, maxWidth:"60ch", marginTop:8, lineHeight:1.6 }}>
+          {cycleState.tip}
+        </p>
+        <div style={{ marginTop:10, fontSize:11, color:"var(--yr-faint)", fontFamily:"var(--font-mono)" }}>
+          Calendar estimate · may vary ±2–4 days
         </div>
-      ) : (
-        <div className="phase-card fade-in">
-          <div className="phase-eyebrow" style={{ color:"var(--yr-blue)" }}>⚡ Training Focus</div>
-          <h2 style={{ fontSize:18, fontWeight:700, color:"var(--yr-text)", margin:"6px 0 6px" }}>Adaptive Mode</h2>
-          <p style={{ fontSize:13, color:"var(--yr-muted)", lineHeight:1.5, marginBottom:10 }}>
-            Your plan adapts from readiness check-ins and equipment. Enable cycle tracking to unlock phase-aware programming.
-          </p>
-          <button className="btn-secondary" onClick={onResetProfile}>Update profile →</button>
-        </div>
-      )}
-
-      {/* ── Contraception note ── */}
-      {isOnContraception && (
-        <div style={{ padding:"12px 14px", borderRadius:14,
-          background:"rgba(140,200,255,0.08)", border:"1px solid rgba(140,200,255,0.22)",
-          fontSize:13, color:"var(--yr-muted)", lineHeight:1.6 }}>
-          <span style={{ color:"var(--yr-blue)", fontWeight:700 }}>Using hormonal contraception: </span>
-          Hormonal contraception changes your hormone profile — the natural phase-based intensity shifts are less applicable. Consistent training load and readiness-based adjustments work well.
-        </div>
-      )}
-
-      {/* ── PCOS / irregular cycle toggle ── */}
-      <div style={{ padding:"12px 14px", borderRadius:14,
-        background:"var(--yr-card)", border:"1px solid var(--yr-border)" }}>
-        <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center" }}>
-          <div>
-            <div style={{ fontWeight:700, fontSize:13, color:"var(--yr-text)" }}>PCOS or irregular cycle?</div>
-            <div style={{ fontSize:11, color:"var(--yr-muted)", marginTop:2 }}>Different guidance applies</div>
-          </div>
-          <button onClick={() => setShowPcos(o => !o)} style={{
-            padding:"6px 12px", borderRadius:99, fontSize:11, fontWeight:700, cursor:"pointer",
-            border:`1px solid ${showPcos ? "rgba(155,216,180,0.4)" : "var(--yr-border)"}`,
-            background: showPcos ? "rgba(155,216,180,0.12)" : "transparent",
-            color: showPcos ? "var(--yr-sage)" : "var(--yr-muted)",
-          }}>{showPcos ? "Hide ▲" : "Show ▾"}</button>
-        </div>
-
-        {showPcos && (
-          <div style={{ marginTop:12 }}>
-            <p style={{ fontSize:13, color:"var(--yr-muted)", lineHeight:1.6, marginBottom:10 }}>
-              {PCOS_GUIDANCE.tip}
-            </p>
-            <div style={{ display:"flex", flexDirection:"column", gap:8, marginBottom:10 }}>
-              {PCOS_GUIDANCE.recommendations.map((r,i) => (
-                <div key={i} className="row" style={{ gap:8, alignItems:"flex-start" }}>
-                  <span style={{ color:"var(--yr-sage)", fontSize:11, flexShrink:0, marginTop:1 }}>✓</span>
-                  <span style={{ fontSize:12, color:"rgba(245,240,240,0.8)", lineHeight:1.5 }}>{r}</span>
-                </div>
-              ))}
-            </div>
-            <p style={{ fontSize:11, color:"var(--yr-amber)", lineHeight:1.5 }}>🍽 {PCOS_GUIDANCE.nutrition}</p>
-          </div>
-        )}
       </div>
 
-      {/* ── Cycle length input — activates the whole variable-window engine ── */}
-      {cycleState && onUpdateProfile && (
-        <CycleLengthPicker
-          value={cycleLength}
-          onChange={(n) => onUpdateProfile({ cycleLength: n })}
-        />
-      )}
-
-      {/* ── Your cycle map — dynamic length ── */}
-      <div style={{ background:"var(--yr-card)", border:"1px solid var(--yr-border)", borderRadius:20, padding:"16px 18px" }}>
-        <div style={{ fontWeight:800, fontSize:"0.9rem", color:"var(--yr-text)", marginBottom:12 }}>
-          Your cycle map
-          <span style={{ fontWeight:400, fontSize:"0.7rem", color:"var(--yr-muted)", marginLeft:8 }}>
-            {cycleLength}-day cycle
-          </span>
-        </div>
-
-        {/* Day strip */}
-        <div style={{ display:"flex", gap:2 }}>
-          {Array.from({ length: cycleLength }, (_, i) => i + 1).map(d => {
-            const phase = PHASE_KEYS.find(pk => {
-              const [lo, hi] = windows[pk] || [0, 0];
-              return d >= lo && d <= hi;
-            }) || "luteal_late";
-            const col = phaseColors[phase];
-            const isNow = cycleState ? d === cycleState.dayOfCycle : false;
+      <div className="yr-clock-wrap">
+        {/* Clock face */}
+        <div className="yr-clock">
+          {Array.from({ length: cycleLength }).map((_, i) => {
+            const d = i + 1;
+            const angle = (d / cycleLength) * 360 - 90;
+            const isToday = d === today;
             return (
-              <div key={d} title={`Day ${d}`} style={{
-                flex:1, height:34, borderRadius:5,
-                background:`${isNow ? col + "8c" : col + "33"}`,
-                border:`1.5px solid ${isNow ? col : "transparent"}`,
-                transform: isNow ? "scaleY(1.22)" : "scaleY(1)",
-                boxShadow: isNow ? `0 0 12px ${col}88` : "none",
-                transition:"transform 0.2s",
-              }} />
+              <div key={d}
+                className={`yr-clock-day${animOn ? " yr-anim-clock-day" : ""}${isToday && fullMotion ? " yr-anim-clock-today" : ""}`}
+                style={{
+                  left:"calc(50% - 4px)", top:0,
+                  transform:`rotate(${angle}deg) translateY(0px)`,
+                  background: phaseColorOf(d),
+                  opacity: isToday ? 1 : 0.4,
+                  height: isToday ? 32 : 16,
+                  width: isToday ? 4 : 6,
+                  boxShadow: isToday ? `0 0 16px ${phaseColorOf(d)}` : "none",
+                  "--i": i,
+                }}
+                title={`Day ${d}`}
+              />
             );
           })}
+          <div className="yr-clock-center">
+            <div className="yr-overline">Day</div>
+            <div className="yr-clock-num">{todayAnim}</div>
+            <div className="yr-clock-of">of {cycleLength}</div>
+          </div>
         </div>
 
-        {/* Legend */}
-        <div style={{ display:"flex", gap:12, marginTop:10, flexWrap:"wrap" }}>
-          {[
-            ["menstrual","🌑","Menstrual"],
-            ["follicular","🌱","Follicular"],
-            ["ovulatory","⚡","Ovulatory"],
-            ["luteal_early","🍂","Luteal early"],
-            ["luteal_late","🌙","Luteal late"],
-          ].map(([key,ico,name]) => (
-            <div key={key} style={{ display:"flex", alignItems:"center", gap:4, fontSize:"0.65rem", color:"var(--yr-muted)" }}>
-              <div style={{ width:7, height:7, borderRadius:2, background: phaseColors[key] }} />
-              {ico} {name}
-              <span style={{ color:"var(--yr-faint)" }}>({phaseLabel(windows, key, cycleLength)})</span>
+        {/* Phase list + stepper */}
+        <div>
+          <div className="yr-overline">Phase windows</div>
+          {phaseList.map((p, i) => (
+            <div key={p.label} className={animOn ? "yr-anim-ledger-row" : ""}
+              style={{ display:"flex", alignItems:"center", gap:12, padding:"14px 0", borderTop:"1px solid var(--yr-border)", "--i":i }}>
+              <div style={{ width:4, height:28, borderRadius:2, background:p.color, flexShrink:0 }} />
+              <div>
+                <div style={{ fontSize:14, fontWeight:500 }}>{p.label}</div>
+                <div style={{ fontSize:11, color:"var(--yr-muted)", fontFamily:"var(--font-mono)" }}>{p.range}</div>
+              </div>
+            </div>
+          ))}
+
+          {/* Cycle length stepper */}
+          <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", borderTop:"1px solid var(--yr-border-strong)", padding:"20px 0", marginTop:8 }}>
+            <div>
+              <div className="yr-overline">Cycle length</div>
+              <div style={{ fontSize:12, color:"var(--yr-muted)" }}>Typical 21–45 days</div>
+            </div>
+            <div style={{ display:"flex", alignItems:"center", gap:12 }}>
+              <button onClick={() => step(-1)} style={{ width:40, height:40, borderRadius:999, border:"1px solid var(--yr-border)", background:"transparent", color:"var(--yr-text)", cursor:"pointer", fontSize:18 }}>−</button>
+              <div style={{ fontFamily:"var(--font-mono)", fontSize:24, fontWeight:500, minWidth:80, textAlign:"center", letterSpacing:"-0.02em" }}>
+                {displayed}<span style={{ fontSize:12, color:"var(--yr-muted)", marginLeft:6 }}>days</span>
+              </div>
+              <button onClick={() => step(+1)} style={{ width:40, height:40, borderRadius:999, border:"1px solid var(--yr-border)", background:"transparent", color:"var(--yr-text)", cursor:"pointer", fontSize:18 }}>+</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* PCOS toggle */}
+      <div style={{ borderTop:"1px solid var(--yr-border)", paddingTop:20, display:"flex", justifyContent:"space-between", alignItems:"center" }}>
+        <div>
+          <div style={{ fontWeight:600, fontSize:14 }}>PCOS or irregular cycle?</div>
+          <div style={{ fontSize:12, color:"var(--yr-muted)", marginTop:2 }}>Different programming applies</div>
+        </div>
+        <button onClick={() => setShowPcos(o=>!o)} style={{ background:"transparent", border:"1px solid var(--yr-border)", borderRadius:999, padding:"6px 14px", color:"var(--yr-text-2)", cursor:"pointer", fontFamily:"inherit", fontSize:12 }}>
+          {showPcos ? "Hide" : "Show"}
+        </button>
+      </div>
+      {showPcos && (
+        <div style={{ paddingBottom:8 }}>
+          <p style={{ fontSize:13, color:"var(--yr-muted)", lineHeight:1.6, margin:"0 0 12px" }}>{PCOS_GUIDANCE.tip}</p>
+          {PCOS_GUIDANCE.recommendations.map((r,i) => (
+            <div key={i} style={{ display:"flex", gap:10, marginBottom:8 }}>
+              <span style={{ color:"var(--phase-accent)", fontFamily:"var(--font-mono)", fontSize:12 }}>—</span>
+              <span style={{ fontSize:13, color:"var(--yr-text-2)", lineHeight:1.5 }}>{r}</span>
             </div>
           ))}
         </div>
-      </div>
+      )}
 
-      {/* ── Phase cards — expandable ── */}
-      <div>
-        <div style={{ fontWeight:700, fontSize:13, color:"var(--yr-text)", marginBottom:8 }}>
-          Phase guide
-        </div>
-        {PHASE_KEYS.map(key => (
-          <PhaseCard
-            key={key}
-            phaseKey={key}
-            isNow={cycleState?.phase === key}
-            windows={windows}
-            cycleLength={cycleLength}
-          />
-        ))}
+      {/* Research disclaimer */}
+      <div style={{ fontSize:11, color:"var(--yr-faint)", lineHeight:1.6, borderTop:"1px solid var(--yr-border)", paddingTop:16 }}>
+        Phase-based programming is based on current evidence, which is still evolving. Individual responses vary significantly. Not medical advice. For PCOS, endometriosis, or PMDD, consult a healthcare provider.
       </div>
-
-      {/* ── Research disclaimer ── */}
-      <div style={{ padding:"12px 14px", borderRadius:12,
-        background:"rgba(255,255,255,0.03)", border:"1px solid var(--yr-border-soft)",
-        fontSize:"0.65rem", color:"var(--yr-faint)", lineHeight:1.6 }}>
-        <span style={{ color:"var(--yr-muted)", fontWeight:600 }}>Research note: </span>
-        Phase-based programming is based on current evidence, which is still evolving. Individual
-        responses vary significantly — your own tracking and readiness data are the most reliable guide.
-        This is general wellness information, not medical advice. For PCOS, endometriosis, PMDD,
-        or irregular cycles, consult a healthcare provider.
-      </div>
-
     </div>
   );
 }

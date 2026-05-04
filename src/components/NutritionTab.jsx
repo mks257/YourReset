@@ -1,136 +1,110 @@
-import { T } from "../theme";
 import { NUTRITION_PHASES, getDailyNudge, GOAL_NUTRITION, GOAL_NUTRITION_EXTRA, getGoalNudge } from "../nutritionEngine";
 import { PHASE_EMOJI } from "../cycleEngine";
+import { useCountUp } from "./MotionHooks";
 
-const GENERAL_TIPS = {
-  protein: "Aim for 1.6–2.0 g/kg bodyweight daily to support muscle building and recovery. Distribute protein across 3–4 meals throughout the day.",
-  carbs: "Choose complex carbohydrates — oats, sweet potato, brown rice, legumes — to fuel training and maintain steady energy throughout the day.",
-  hydration: "Aim for 2–2.5 L of water daily, adding 400–600 ml for every hour of exercise. Electrolytes matter if you sweat heavily.",
-  keyNutrients: [
-    { name: "Protein", why: "Essential for muscle repair, hormone production, and satiety.", foods: ["Chicken", "Eggs", "Greek yogurt", "Lentils", "Tofu"] },
-    { name: "Iron", why: "Active women are often iron-deficient, leading to fatigue and poor performance.", foods: ["Lean red meat", "Spinach", "Lentils", "Pumpkin seeds", "Dark chocolate"] },
-    { name: "Omega-3s", why: "Reduce inflammation, support joint health, and improve recovery.", foods: ["Salmon", "Sardines", "Walnuts", "Flaxseed", "Chia seeds"] },
-    { name: "Magnesium", why: "Involved in 300+ enzymatic reactions. Supports sleep, muscle function, and mood.", foods: ["Dark leafy greens", "Almonds", "Avocado", "Banana", "Dark chocolate"] },
-  ],
-  cravings: "Cravings are often signals from your body, not failures of willpower. Consistent meals with protein, fat, and fiber reduce cravings naturally. When they hit, aim for a nutrient-dense version first — dark chocolate over milk chocolate, fruit over candy.",
-  mealIdeas: [
-    "Scrambled eggs with spinach and sourdough toast",
-    "Grilled chicken salad with avocado and quinoa",
-    "Salmon rice bowl with edamame and sesame dressing",
-    "Lentil soup with crusty bread",
-    "Greek yogurt with berries, granola, and chia seeds",
-    "Banana + almond butter pre-workout snack",
-  ],
-};
+export default function NutritionTab({ cycleState, profile, motion = "full" }) {
+  const animOn = motion !== "off";
+  const fullMotion = motion === "full";
 
-function NutritionTab({ cycleState, profile }) {
-  const isFemaleCycle = profile?.gender === "female" && profile?.cycleTracking;
+  const isFemaleCycle = profile?.cycleTracking && cycleState;
   const phase = isFemaleCycle ? cycleState?.phase : null;
   const goal = profile?.goal || "wellness";
-  
+
   const data = phase
     ? NUTRITION_PHASES[phase]
-    : (GOAL_NUTRITION[goal] || GOAL_NUTRITION_EXTRA[goal]);
-  const nudge = phase ? getDailyNudge(phase) : getGoalNudge(goal);
-  const d = data || GENERAL_TIPS;
-  
-  const phaseColor = phase ? (cycleState?.color || T.teal) : T.teal;
-  const phaseEmoji = phase ? PHASE_EMOJI[phase] : "🥗";
-  
-  const goalLabels = { fat_loss: "Fat Loss", strength: "Strength", wellness: "Wellness", endurance: "Endurance" };
-  const phaseLabel = phase ? `${cycleState?.label || ""} Nutrition` : `${goalLabels[goal]} Nutrition`;
+    : (GOAL_NUTRITION[goal] || GOAL_NUTRITION_EXTRA?.[goal]);
 
-  const cravingsTitle = phase ? "🍫 Cravings & Appetite" : "💤 Recovery & Appetite";
+  const nudge = phase ? getDailyNudge?.(phase) : getGoalNudge?.(goal);
+  const d = data || {};
+
+  const phaseLabel = phase
+    ? `${PHASE_EMOJI[phase]} ${cycleState?.label} Nutrition`
+    : `${goal.replace("_"," ")} Nutrition`;
+
+  const kcalTarget = phase === "luteal_late" ? 2050 : 1820;
+  const kcalAnim = useCountUp(kcalTarget, { duration:1100, enabled:animOn });
+
+  const macros = [
+    { key:"protein",  label:"Protein",  val:"128g", pct:"35%", c:"var(--phase-accent)" },
+    { key:"carbs",    label:"Carbs",    val:"215g", pct:"25%", c:"color-mix(in oklch, var(--phase-accent) 50%, transparent)" },
+    { key:"fat",      label:"Fat",      val:"62g",  pct:"20%", c:"var(--yr-text-2)" },
+    { key:"fiber",    label:"Fiber",    val:"32g",  pct:"20%", c:"var(--yr-surface-2)" },
+  ];
+
+  const cards = d.keyNutrients ? d.keyNutrients.slice(0,4).map(n => ({
+    key: n.name, title: n.name, body: n.why,
+  })) : [
+    { key:"protein",  title:"Protein",   body: d.protein || "Aim for consistent protein across meals." },
+    { key:"carbs",    title:"Carbs",     body: d.carbs   || "Focus on complex carbohydrates." },
+    { key:"hydration",title:"Hydration", body: d.hydration || "Aim for 2–2.5L per day." },
+    { key:"timing",   title:"Timing",    body: "Pre/post-workout nutrition matters most on training days." },
+  ];
 
   return (
-    <div className="fu d2">
-      {/* Hero card */}
-      <div style={{ background: T.card, border: `1px solid ${phaseColor}33`, borderRadius: 20, padding: "20px 22px", marginBottom: 16, borderLeft: `4px solid ${phaseColor}` }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 10 }}>
-          <span style={{ fontSize: "1.5rem" }}>{phaseEmoji}</span>
-          <div>
-            <div style={{ fontFamily: "'Outfit',sans-serif", fontWeight: 900, fontSize: "1rem", color: phaseColor }}>{phaseLabel}</div>
-            {phase && cycleState && <div style={{ fontSize: "0.68rem", color: T.muted, marginTop: 2 }}>Day {cycleState.dayOfCycle} of {cycleState.cycleLength}</div>}
-            {!phase && <div style={{ fontSize: "0.68rem", color: T.muted, marginTop: 2 }}>Goal-based guidance</div>}
-          </div>
-        </div>
-        {nudge && (
-          <div style={{ fontSize: "0.82rem", color: "rgba(240,238,255,0.85)", lineHeight: 1.6, padding: "10px 14px", background: `${phaseColor}0d`, borderRadius: 10, fontStyle: "italic" }}>
-            "{nudge}"
-          </div>
-        )}
+    <div className="yr-stack-lg">
+      <div>
+        <div className="yr-overline">{phaseLabel}</div>
+        <h1 className="yr-display" style={{ fontSize:"clamp(28px,4vw,44px)", fontWeight:500, letterSpacing:"-0.03em", margin:0, maxWidth:"22ch", lineHeight:1.1 }}>
+          {nudge || "Fuel your training well."}
+        </h1>
       </div>
 
-      {/* 2x2 macro grid */}
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 16 }}>
-        {[
-          { icon: "🥩", title: "Protein", content: d.protein, color: T.pink },
-          { icon: "🍠", title: "Carbs", content: d.carbs, color: T.amber },
-          { icon: "💧", title: "Hydration", content: d.hydration, color: T.teal },
-          { icon: "✨", title: "Key Nutrients", content: null, color: T.violet, isNutrients: true },
-        ].map(card => (
-          <div key={card.title} style={{ background: T.card, border: `1px solid ${card.color}22`, borderRadius: 16, padding: "14px 16px" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 8 }}>
-              <span style={{ fontSize: "1rem" }}>{card.icon}</span>
-              <div style={{ fontFamily: "'Outfit',sans-serif", fontWeight: 800, fontSize: "0.82rem", color: card.color }}>{card.title}</div>
+      {/* Plate */}
+      <div className={`yr-plate${animOn ? " yr-anim-plate" : ""}`}>
+        <div className="yr-plate-disc" />
+        <div className={`yr-plate-slice${fullMotion ? " yr-bento-breathe" : ""}`} />
+        <div className="yr-plate-hole">
+          <div className="yr-overline">Target</div>
+          <div style={{ fontFamily:"var(--font-mono)", fontSize:32, fontWeight:500, color:"var(--phase-accent)", letterSpacing:"-0.03em" }}>
+            {kcalAnim.toLocaleString()}
+          </div>
+          <div style={{ fontSize:11, color:"var(--yr-muted)", fontFamily:"var(--font-mono)" }}>kcal · today</div>
+        </div>
+      </div>
+
+      {/* Macro legend */}
+      <div className="yr-plate-legend">
+        {macros.map((m, i) => (
+          <div className={`yr-plate-legend-item${animOn ? " yr-stagger" : ""}`} key={m.key} style={{ "--c":m.c, "--i":i+2 }}>
+            <div className="yr-plate-legend-key">{m.label}</div>
+            <div className="yr-plate-legend-val">
+              {m.val} <span style={{ color:"var(--yr-muted)", fontSize:12, fontFamily:"var(--font-mono)", marginLeft:6 }}>{m.pct}</span>
             </div>
-            {card.isNutrients ? (
-              <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-                {d.keyNutrients.map(n => (
-                  <div key={n.name} style={{ fontSize: "0.68rem" }}>
-                    <span style={{ color: T.violet, fontWeight: 700 }}>{n.name}</span>
-                    <span style={{ color: T.muted }}> — {n.why}</span>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div style={{ fontSize: "0.72rem", color: "rgba(240,238,255,0.7)", lineHeight: 1.55 }}>{card.content}</div>
-            )}
           </div>
         ))}
       </div>
 
-      {/* Key nutrients detail */}
-      <div style={{ background: T.card, border: `1px solid ${T.border}`, borderRadius: 18, padding: "18px 20px", marginBottom: 16 }}>
-        <div style={{ fontFamily: "'Outfit',sans-serif", fontWeight: 800, fontSize: "0.9rem", marginBottom: 14 }}>✨ Key Nutrients — Food Sources</div>
-        <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-          {d.keyNutrients.map(n => (
-            <div key={n.name} style={{ borderLeft: `3px solid ${phaseColor}`, paddingLeft: 12 }}>
-              <div style={{ fontFamily: "'Outfit',sans-serif", fontWeight: 700, fontSize: "0.82rem", color: phaseColor, marginBottom: 3 }}>{n.name}</div>
-              <div style={{ fontSize: "0.7rem", color: "rgba(240,238,255,0.65)", lineHeight: 1.5, marginBottom: 5 }}>{n.why}</div>
-              <div style={{ display: "flex", gap: 5, flexWrap: "wrap" }}>
-                {n.foods.map(f => (
-                  <span key={f} style={{ fontSize: "0.62rem", padding: "2px 8px", borderRadius: 100, background: `${phaseColor}15`, color: phaseColor, fontWeight: 600 }}>{f}</span>
-                ))}
-              </div>
+      {/* Phase guidance */}
+      <div>
+        <div className="yr-overline">Phase guidance</div>
+        <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit,minmax(220px,1fr))", borderTop:"1px solid var(--yr-border)" }}>
+          {cards.map((c, i) => (
+            <div key={c.key} className={animOn ? "yr-anim-ledger-row" : ""} style={{ borderBottom:"1px solid var(--yr-border)", padding:"16px 16px 16px 0", "--i":i }}>
+              <div className="yr-overline" style={{ color:"var(--phase-accent)" }}>{c.title}</div>
+              <div style={{ fontSize:13, color:"var(--yr-text-2)", lineHeight:1.55, marginTop:4 }}>{c.body}</div>
             </div>
           ))}
         </div>
-      </div>
-
-      {/* Cravings card */}
-      <div style={{ background: T.card, border: `1px solid ${T.pink}22`, borderRadius: 16, padding: "16px 18px", marginBottom: 16 }}>
-        <div style={{ fontFamily: "'Outfit',sans-serif", fontWeight: 800, fontSize: "0.88rem", color: T.pink, marginBottom: 8 }}>{cravingsTitle}</div>
-        <div style={{ fontSize: "0.78rem", color: "rgba(240,238,255,0.75)", lineHeight: 1.6 }}>{d.cravings}</div>
       </div>
 
       {/* Meal ideas */}
-      <div style={{ background: T.card, border: `1px solid ${T.border}`, borderRadius: 18, padding: "18px 20px" }}>
-        <div style={{ fontFamily: "'Outfit',sans-serif", fontWeight: 800, fontSize: "0.9rem", marginBottom: 14 }}>🍽 Meal Ideas</div>
-        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-          {d.mealIdeas.map((meal, i) => (
-            <div key={i} style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 12px", background: T.card2, borderRadius: 10 }}>
-              <div style={{ width: 24, height: 24, borderRadius: 8, background: `${phaseColor}20`, color: phaseColor, display: "flex", alignItems: "center", justifyContent: "center", fontSize: "0.65rem", fontWeight: 800, flexShrink: 0 }}>{i + 1}</div>
-              <div style={{ fontSize: "0.78rem", color: "rgba(240,238,255,0.85)" }}>{meal}</div>
-            </div>
-          ))}
+      {d.mealIdeas && d.mealIdeas.length > 0 && (
+        <div>
+          <div className="yr-overline">Meal ideas</div>
+          <div style={{ display:"flex", flexDirection:"column", gap:8, marginTop:8 }}>
+            {d.mealIdeas.slice(0,5).map((meal, i) => (
+              <div key={i} style={{ display:"flex", gap:12, padding:"10px 0", borderBottom:"1px solid var(--yr-border)" }}>
+                <div style={{ fontFamily:"var(--font-mono)", fontSize:11, color:"var(--yr-muted)", minWidth:24 }}>{String(i+1).padStart(2,"0")}</div>
+                <div style={{ fontSize:13, color:"var(--yr-text-2)" }}>{meal}</div>
+              </div>
+            ))}
+          </div>
         </div>
-        <div style={{ marginTop: 14, padding: "10px 14px", background: `${T.amber}0d`, borderRadius: 10, fontSize: "0.68rem", color: T.muted, lineHeight: 1.5 }}>
-          <span style={{ color: T.amber, fontWeight: 700 }}>Note: </span>These are suggestions, not prescriptions. Listen to your body, adjust for allergies and preferences, and consult a registered dietitian for personalized medical nutrition advice.
-        </div>
+      )}
+
+      <div style={{ fontSize:11, color:"var(--yr-faint)", lineHeight:1.6 }}>
+        These are general wellness suggestions, not prescriptions. Consult a registered dietitian for personalised nutrition advice.
       </div>
     </div>
   );
 }
-
-export default NutritionTab;

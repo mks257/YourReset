@@ -9,68 +9,49 @@ const CHECKS = [
 export default function ReadinessCheck({ readiness, showReadiness, setReadiness, setShowReadiness, cycleState }) {
   const canSave = showReadiness?.energy && showReadiness?.sleep && showReadiness?.soreness;
 
-  // Compact prompt
   if (!readiness && !showReadiness) return (
-    <div className="readiness-card fade-in d3">
+    <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", gap:12, padding:"14px 16px", borderRadius:14, border:"1px solid var(--yr-border)", background:"var(--yr-surface)" }}>
       <div>
-        <h3>Check in before training</h3>
-        <p>Energy · Sleep · Soreness</p>
+        <div style={{ fontWeight:600, fontSize:13, color:"var(--yr-text)", marginBottom:2 }}>Check in before training</div>
+        <div style={{ fontSize:11, color:"var(--yr-muted)" }}>Energy · Sleep · Soreness</div>
       </div>
-      <button className="btn-ghost" onClick={() => setShowReadiness(true)}>Check in</button>
+      <button onClick={() => setShowReadiness(true)} style={{ padding:"8px 14px", borderRadius:999, border:"1px solid var(--yr-border-strong)", background:"var(--yr-surface-2)", color:"var(--yr-text)", cursor:"pointer", fontFamily:"inherit", fontSize:12, fontWeight:600 }}>
+        Check in
+      </button>
     </div>
   );
 
-  // Expanded form
   if (showReadiness && !readiness) return (
-    <div className="readiness-form fade-in">
-      <p style={{ fontWeight:700, fontSize:"14px", color:"var(--yr-text)", marginBottom:14 }}>
-        Today's check-in
-      </p>
+    <div style={{ padding:16, borderRadius:14, border:"1px solid var(--yr-border)", background:"var(--yr-surface)" }}>
+      <div style={{ fontWeight:700, fontSize:13, color:"var(--yr-text)", marginBottom:14 }}>Today's check-in</div>
       {CHECKS.map(({ key, label, opts }) => (
         <div key={key} style={{ marginBottom:12 }}>
-          <div className="field-label">{label}</div>
-          <div className="row" style={{ flexWrap:"wrap", gap:6 }}>
+          <div style={{ fontFamily:"var(--font-mono)", fontSize:10, textTransform:"uppercase", letterSpacing:"0.14em", color:"var(--yr-muted)", marginBottom:8 }}>{label}</div>
+          <div className="yr-pills">
             {opts.map((opt, idx) => {
-              const val = key === "energy" ? idx + 1 : opt.toLowerCase();
-              const active = showReadiness?.[key] === val;
+              const val = key === "energy" ? idx+1 : opt.toLowerCase();
               return (
-                <button key={opt}
-                  className={`chip${active ? " active" : ""}`}
-                  style={{ padding:"6px 10px", fontSize:"12px", borderRadius:8 }}
-                  onClick={() => setShowReadiness(p => ({ ...p, [key]: val }))}>
-                  {opt}
-                </button>
+                <button key={opt} className={`yr-pill${showReadiness?.[key] === val ? " active" : ""}`}
+                  onClick={() => setShowReadiness(p => ({ ...p, [key]: val }))}>{opt}</button>
               );
             })}
           </div>
         </div>
       ))}
-      <button className="btn-primary-full" disabled={!canSave} style={{ marginTop:8 }}
-        onClick={() => { setReadiness(showReadiness); setShowReadiness(false); }}>
+      <button disabled={!canSave} onClick={() => { setReadiness(showReadiness); setShowReadiness(false); }}
+        style={{ width:"100%", padding:"11px", border:"none", borderRadius:10, cursor:canSave?"pointer":"not-allowed", background:canSave?"var(--phase-accent)":"var(--yr-surface-2)", color:canSave?"#0a0a0a":"var(--yr-muted)", fontFamily:"inherit", fontWeight:700, fontSize:13, marginTop:4 }}>
         Save &amp; adapt plan
       </button>
     </div>
   );
 
-  // Saved summary
   if (readiness) return (
-    <div className="row-between fade-in" style={{
-      padding:"11px 14px", borderRadius:18,
-      background:"var(--yr-card)", border:"1px solid var(--yr-border)",
-    }}>
+    <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", gap:12, padding:"12px 16px", borderRadius:14, border:"1px solid var(--yr-border)", background:"var(--yr-surface)" }}>
       <div>
-        <p style={{ fontSize:"12px", color:"var(--phase-accent)", fontWeight:600, marginBottom:2 }}>
-          Readiness logged · plan adjusted
-        </p>
-        <p style={{ fontSize:"11px", color:"var(--yr-muted)" }}>
-          Energy {readiness.energy}/5 · Sleep {readiness.sleep} · Soreness {readiness.soreness}
-          {cycleState && ` · ${cycleState.setsReps}`}
-        </p>
+        {cycleState && <div style={{ fontSize:12, color:"var(--phase-accent)", fontWeight:600, marginBottom:2 }}>{PHASE_EMOJI[cycleState.phase]} {cycleState.setsReps}</div>}
+        <div style={{ fontSize:11, color:"var(--yr-muted)" }}>Energy {readiness.energy}/5 · Sleep {readiness.sleep} · Soreness {readiness.soreness}</div>
       </div>
-      <button className="btn-ghost" style={{ padding:"5px 10px", fontSize:"12px" }}
-        onClick={() => { setReadiness(null); setShowReadiness(false); }}>
-        Redo
-      </button>
+      <button onClick={() => { setReadiness(null); setShowReadiness(false); }} style={{ background:"transparent", border:"none", color:"var(--yr-muted)", cursor:"pointer", fontSize:12, fontFamily:"inherit" }}>redo</button>
     </div>
   );
 
