@@ -1,44 +1,4 @@
-import { useState } from "react";
-
-const T = {
-  bg: "#080912", card: "#0f1020", card2: "#141528", border: "rgba(255,255,255,0.07)",
-  pink: "#ff6b9d", teal: "#38d9c0", amber: "#ffb347", violet: "#b48bfa",
-  green: "#5eead4", text: "#f0eeff", muted: "#6b6a88",
-};
-
-const GOALS = [
-  { id: "fat_loss", label: "Lose fat", icon: "🔥" },
-  { id: "strength", label: "Build strength", icon: "💪" },
-  { id: "wellness", label: "General wellness", icon: "🌿" },
-  { id: "endurance", label: "Improve endurance", icon: "🏃" },
-];
-
-const EQUIPMENT_OPTIONS = [
-  { id: "bodyweight", label: "Bodyweight only", icon: "🤸" },
-  { id: "dumbbells", label: "Dumbbells", icon: "🏋️" },
-  { id: "barbell", label: "Barbell", icon: "⚖️" },
-  { id: "bands", label: "Resistance bands", icon: "🔁" },
-  { id: "kettlebell", label: "Kettlebell", icon: "🫙" },
-  { id: "machines", label: "Gym machines", icon: "🏟️" },
-  { id: "cable", label: "Cable machine", icon: "🔗" },
-  { id: "cardio", label: "Cardio equipment", icon: "🚴" },
-];
-
-const inp = {
-  width: "100%", padding: "11px 14px", borderRadius: 12,
-  border: `1px solid ${T.border}`, background: T.card2,
-  color: T.text, fontFamily: "'Outfit',sans-serif", fontSize: "0.9rem",
-  outline: "none", boxSizing: "border-box",
-};
-
-const btn = (active, color = T.pink) => ({
-  padding: "10px 14px", borderRadius: 12, cursor: "pointer",
-  border: `1px solid ${active ? color : T.border}`,
-  background: active ? `${color}18` : T.card2,
-  color: active ? color : T.muted,
-  fontFamily: "'Outfit',sans-serif", fontWeight: 700, fontSize: "0.82rem",
-  transition: "all 0.15s", display: "flex", alignItems: "center", gap: 6,
-});
+import { useState, useEffect } from "react";
 
 export default function Onboarding({ onComplete }) {
   const [step, setStep] = useState(0);
@@ -50,10 +10,29 @@ export default function Onboarding({ onComplete }) {
   const [cycleLength, setCycleLength] = useState(28);
   const [equipment, setEquipment] = useState(["dumbbells", "machines", "cardio"]);
 
+  const GOALS = [
+    { id: "fat_loss", label: "Fat Loss", icon: "🔥", desc: "Sustainable deficit & preservation" },
+    { id: "strength", label: "Strength", icon: "💪", desc: "Hypertrophy & metabolic power" },
+    { id: "wellness", label: "Wellness", icon: "🌿", desc: "Longevity & hormonal balance" },
+    { id: "endurance", label: "Endurance", icon: "🏃", desc: "Aerobic base & efficiency" },
+  ];
+
+  const EQUIPMENT_OPTIONS = [
+    { id: "bodyweight", label: "Bodyweight", icon: "🤸" },
+    { id: "dumbbells", label: "Dumbbells", icon: "🏋️" },
+    { id: "barbell", label: "Barbell", icon: "⚖️" },
+    { id: "bands", label: "Bands", icon: "🔁" },
+    { id: "kettlebell", label: "Kettlebell", icon: "🫙" },
+    { id: "machines", label: "Gym Machines", icon: "🏟️" },
+    { id: "cable", label: "Cable", icon: "🔗" },
+    { id: "cardio", label: "Cardio", icon: "🚴" },
+  ];
+
   const toggleEquip = (id) =>
     setEquipment(e => e.includes(id) ? e.filter(x => x !== id) : [...e, id]);
 
   const next = () => setStep(s => s + 1);
+  const back = () => setStep(s => Math.max(0, s - 1));
 
   const finish = () => {
     onComplete({
@@ -67,170 +46,338 @@ export default function Onboarding({ onComplete }) {
     });
   };
 
+  // Render helpers for the premium aesthetic
+  const ScreenWrapper = ({ children, title, subtitle, eyebrow }) => (
+    <div className="yr-onboarding-screen yr-tab-fade">
+      <div className="yr-onboarding-content">
+        <div style={{ textAlign: "center", marginBottom: 48 }}>
+          {eyebrow && <div className="yr-overline" style={{ marginBottom: 12 }}>{eyebrow}</div>}
+          <h1 className="yr-display" style={{ 
+            fontSize: "clamp(32px, 8vw, 56px)", 
+            lineHeight: 1, 
+            marginBottom: 16,
+            fontStyle: "italic" 
+          }}>
+            {title}
+          </h1>
+          {subtitle && <p style={{ color: "var(--yr-muted)", fontSize: 16, maxWidth: "36ch", margin: "0 auto" }}>{subtitle}</p>}
+        </div>
+        {children}
+      </div>
+    </div>
+  );
+
   const STEPS = [
-    // Step 0: Name + Goal
-    <div key="step0">
-      <div style={{ fontSize: "2rem", marginBottom: 8 }}>👋</div>
-      <h2 style={{ fontFamily: "'Outfit',sans-serif", fontWeight: 900, fontSize: "1.5rem", marginBottom: 6 }}>
-        Welcome to <span style={{ color: T.pink }}>YourReset</span>
-      </h2>
-      <p style={{ color: T.muted, fontSize: "0.85rem", marginBottom: 24, lineHeight: 1.6 }}>
-        Let's personalize your experience. Takes about 30 seconds.
-      </p>
-      <label style={{ fontSize: "0.72rem", color: T.muted, textTransform: "uppercase", letterSpacing: "0.05em" }}>Your name</label>
-      <input
-        style={{ ...inp, marginTop: 6, marginBottom: 20 }}
-        placeholder="e.g. Kavya"
-        value={name}
-        onChange={e => setName(e.target.value)}
-        autoFocus
-      />
-      <label style={{ fontSize: "0.72rem", color: T.muted, textTransform: "uppercase", letterSpacing: "0.05em" }}>Primary goal</label>
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginTop: 8 }}>
+    // Step 0: Welcome & Name
+    <ScreenWrapper 
+      key="welcome"
+      title="Welcome to YourReset" 
+      subtitle="A physiological-first approach to performance."
+      eyebrow="Introduction"
+    >
+      <div style={{ maxWidth: 320, margin: "0 auto", width: "100%" }}>
+        <div className="yr-overline" style={{ marginBottom: 8, textAlign: "left" }}>Your Name</div>
+        <input 
+          className="yr-input"
+          style={{ fontSize: 18, padding: "16px 20px", borderRadius: 16 }}
+          placeholder="How should we call you?"
+          value={name}
+          onChange={e => setName(e.target.value)}
+          autoFocus
+        />
+        <button 
+          className="yr-hub-cta" 
+          style={{ width: "100%", marginTop: 24, padding: 16, fontSize: 15 }}
+          onClick={next}
+        >
+          Begin Journey
+        </button>
+      </div>
+    </ScreenWrapper>,
+
+    // Step 1: Goal
+    <ScreenWrapper 
+      key="goal"
+      title="Define your Focus" 
+      subtitle="We tailor every recommendation to this primary objective."
+      eyebrow="Objective"
+    >
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, maxWidth: 500, margin: "0 auto" }}>
         {GOALS.map(g => (
-          <button key={g.id} style={btn(goal === g.id)} onClick={() => setGoal(g.id)}>
-            <span>{g.icon}</span> {g.label}
+          <button 
+            key={g.id} 
+            className={`yr-onboarding-tile ${goal === g.id ? "active" : ""}`}
+            onClick={() => setGoal(g.id)}
+          >
+            <div className="yr-onboarding-tile-icon">{g.icon}</div>
+            <div className="yr-onboarding-tile-label">{g.label}</div>
+            <div className="yr-onboarding-tile-desc">{g.desc}</div>
           </button>
         ))}
       </div>
-      <button
-        onClick={next}
-        disabled={!goal}
-        style={{ marginTop: 24, width: "100%", padding: "13px 0", borderRadius: 14, border: "none", cursor: goal ? "pointer" : "not-allowed", background: goal ? `linear-gradient(135deg,${T.pink},${T.violet})` : T.card2, color: goal ? "#fff" : T.muted, fontFamily: "'Outfit',sans-serif", fontWeight: 800, fontSize: "0.95rem", transition: "all 0.2s" }}
-      >Continue →</button>
-    </div>,
+      <div className="yr-onboarding-footer">
+        <button className="yr-onboarding-back" onClick={back}>← Back</button>
+        <button className="yr-hub-cta" onClick={next} disabled={!goal}>Continue</button>
+      </div>
+    </ScreenWrapper>,
 
-    // Step 1: Gender
-    <div key="step1">
-      <div style={{ fontSize: "2rem", marginBottom: 8 }}>🧑</div>
-      <h2 style={{ fontFamily: "'Outfit',sans-serif", fontWeight: 900, fontSize: "1.4rem", marginBottom: 6 }}>
-        What's your gender?
-      </h2>
-      <p style={{ color: T.muted, fontSize: "0.82rem", marginBottom: 20, lineHeight: 1.6 }}>
-        This helps us tailor your health tracking and physiological baselines.
-      </p>
-      <div style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 20 }}>
+    // Step 2: Gender
+    <ScreenWrapper 
+      key="gender"
+      title="Your Physiology" 
+      subtitle="Critical for hormonal and metabolic baselines."
+      eyebrow="Biology"
+    >
+      <div style={{ display: "flex", flexDirection: "column", gap: 12, maxWidth: 400, margin: "0 auto", width: "100%" }}>
         {[
           { id: "female", label: "Female", icon: "👩" },
           { id: "male", label: "Male", icon: "👨" },
           { id: "other", label: "Non-binary / Other", icon: "🧑" },
         ].map(opt => (
-          <button key={opt.id} onClick={() => setGender(opt.id)} style={{
-            ...btn(gender === opt.id), justifyContent: "flex-start", padding: "14px 16px",
-          }}>
-            <span style={{ fontSize: "1.2rem" }}>{opt.icon}</span> {opt.label}
+          <button 
+            key={opt.id} 
+            className={`yr-onboarding-row ${gender === opt.id ? "active" : ""}`}
+            onClick={() => setGender(opt.id)}
+          >
+            <span style={{ fontSize: 20 }}>{opt.icon}</span>
+            <span style={{ fontSize: 16, fontWeight: 500 }}>{opt.label}</span>
+            <div style={{ marginLeft: "auto", opacity: gender === opt.id ? 1 : 0 }}>
+               <div style={{ width: 8, height: 8, borderRadius: "50%", background: "var(--phase-accent)" }} />
+            </div>
           </button>
         ))}
       </div>
-      <div style={{ display: "flex", gap: 8 }}>
-        <button onClick={() => setStep(0)} style={{ flex: 1, padding: "12px 0", borderRadius: 14, border: `1px solid ${T.border}`, background: "transparent", color: T.muted, fontFamily: "'Outfit',sans-serif", fontWeight: 700, cursor: "pointer" }}>← Back</button>
-        <button
-          onClick={() => {
-            if (gender === "female") setStep(2);
-            else { setCycleOption("none"); setStep(3); }
-          }}
-          disabled={!gender}
-          style={{ flex: 2, padding: "12px 0", borderRadius: 14, border: "none", cursor: gender ? "pointer" : "not-allowed", background: gender ? `linear-gradient(135deg,${T.pink},${T.violet})` : T.card2, color: gender ? "#fff" : T.muted, fontFamily: "'Outfit',sans-serif", fontWeight: 800, fontSize: "0.95rem", transition: "all 0.2s" }}
-        >Continue →</button>
+      <div className="yr-onboarding-footer">
+        <button className="yr-onboarding-back" onClick={back}>← Back</button>
+        <button className="yr-hub-cta" onClick={() => {
+          if (gender === "female") next();
+          else { setCycleOption("none"); setStep(step + 2); }
+        }} disabled={!gender}>Continue</button>
       </div>
-    </div>,
+    </ScreenWrapper>,
 
-    // Step 2: Cycle info
-    <div key="step2">
-      <div style={{ fontSize: "2rem", marginBottom: 8 }}>🌸</div>
-      <h2 style={{ fontFamily: "'Outfit',sans-serif", fontWeight: 900, fontSize: "1.4rem", marginBottom: 6 }}>
-        Cycle-aware training
-      </h2>
-      <p style={{ color: T.muted, fontSize: "0.82rem", marginBottom: 20, lineHeight: 1.6 }}>
-        YourReset adapts your workouts to your hormonal cycle. No mainstream app does this — it's your moat.
-      </p>
-      <div style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 20 }}>
+    // Step 3: Cycle Tracking (Female Only)
+    <ScreenWrapper 
+      key="cycle"
+      title="Phase Awareness" 
+      subtitle="Optimizing workouts around your hormonal architecture."
+      eyebrow="Optimization"
+    >
+      <div style={{ display: "flex", flexDirection: "column", gap: 12, maxWidth: 460, margin: "0 auto", width: "100%" }}>
         {[
-          { id: "track", label: "Yes, I track my cycle", sub: "We'll adapt workouts to your phase", icon: "🌱" },
-          { id: "none", label: "No / I use hormonal contraception", sub: "You'll get standard adaptive plans", icon: "⚡" },
+          { id: "track", label: "Track my Cycle", sub: "Dynamic adjustment based on phase", icon: "🌱" },
+          { id: "none", label: "Standard Plan", sub: "Consistent adaptive progression", icon: "⚡" },
         ].map(opt => (
-          <button key={opt.id} onClick={() => setCycleOption(opt.id)} style={{
-            ...btn(cycleOption === opt.id), flexDirection: "column", alignItems: "flex-start",
-            padding: "14px 16px", gap: 4,
-          }}>
-            <span style={{ display: "flex", gap: 8, alignItems: "center" }}>{opt.icon} {opt.label}</span>
-            <span style={{ fontSize: "0.72rem", color: T.muted, fontWeight: 400 }}>{opt.sub}</span>
+          <button 
+            key={opt.id} 
+            className={`yr-onboarding-row ${cycleOption === opt.id ? "active" : ""}`}
+            style={{ padding: "20px 24px", height: "auto", textAlign: "left", alignItems: "flex-start", flexDirection: "column", gap: 4 }}
+            onClick={() => setCycleOption(opt.id)}
+          >
+            <div style={{ display: "flex", alignItems: "center", gap: 10, width: "100%" }}>
+              <span style={{ fontSize: 18 }}>{opt.icon}</span>
+              <span style={{ fontSize: 16, fontWeight: 600 }}>{opt.label}</span>
+              <div style={{ marginLeft: "auto", opacity: cycleOption === opt.id ? 1 : 0 }}>
+                <div style={{ width: 8, height: 8, borderRadius: "50%", background: "var(--phase-accent)" }} />
+              </div>
+            </div>
+            <div style={{ fontSize: 12, color: "var(--yr-muted)", marginLeft: 28 }}>{opt.sub}</div>
           </button>
         ))}
-      </div>
 
-      {cycleOption === "track" && (
-        <div style={{ background: T.card2, borderRadius: 14, padding: "16px", marginBottom: 16 }}>
-          <label style={{ fontSize: "0.72rem", color: T.muted, textTransform: "uppercase", letterSpacing: "0.05em" }}>
-            First day of last period
-          </label>
-          <input type="date" value={cycleStart} onChange={e => setCycleStart(e.target.value)}
-            style={{ ...inp, marginTop: 8, marginBottom: 14 }} />
-          <label style={{ fontSize: "0.72rem", color: T.muted, textTransform: "uppercase", letterSpacing: "0.05em" }}>
-            Cycle length: <strong style={{ color: T.pink }}>{cycleLength} days</strong>
-          </label>
-          <input type="range" min={21} max={40} value={cycleLength} onChange={e => setCycleLength(+e.target.value)}
-            style={{ width: "100%", marginTop: 8, accentColor: T.pink }} />
-          <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.62rem", color: T.muted, marginTop: 2 }}>
-            <span>21 days</span><span>40 days</span>
+        {cycleOption === "track" && (
+          <div className="yr-onboarding-subpanel">
+            <div style={{ marginBottom: 16 }}>
+              <div className="yr-overline" style={{ marginBottom: 8 }}>Last Period Start</div>
+              <input type="date" className="yr-input" value={cycleStart} onChange={e => setCycleStart(e.target.value)} />
+            </div>
+            <div>
+              <div className="yr-overline" style={{ marginBottom: 8, display: "flex", justifyContent: "space-between" }}>
+                <span>Cycle Length</span>
+                <span style={{ color: "var(--phase-accent)" }}>{cycleLength} Days</span>
+              </div>
+              <input type="range" min={21} max={40} value={cycleLength} onChange={e => setCycleLength(+e.target.value)} 
+                     style={{ width: "100%", accentColor: "var(--phase-accent)" }} />
+            </div>
           </div>
-          <p style={{ fontSize: "0.68rem", color: T.muted, marginTop: 10, lineHeight: 1.5 }}>
-            ⚕️ All suggestions are general wellness guidance, not medical advice. PCOS, endometriosis, or irregular cycles? You can always override any recommendation.
-          </p>
-        </div>
-      )}
-
-      <div style={{ display: "flex", gap: 8 }}>
-        <button onClick={() => setStep(1)} style={{ flex: 1, padding: "12px 0", borderRadius: 14, border: `1px solid ${T.border}`, background: "transparent", color: T.muted, fontFamily: "'Outfit',sans-serif", fontWeight: 700, cursor: "pointer" }}>← Back</button>
-        <button
-          onClick={next}
-          disabled={!cycleOption || (cycleOption === "track" && !cycleStart)}
-          style={{ flex: 2, padding: "12px 0", borderRadius: 14, border: "none", cursor: (cycleOption && !(cycleOption === "track" && !cycleStart)) ? "pointer" : "not-allowed", background: (cycleOption && !(cycleOption === "track" && !cycleStart)) ? `linear-gradient(135deg,${T.pink},${T.violet})` : T.card2, color: (cycleOption && !(cycleOption === "track" && !cycleStart)) ? "#fff" : T.muted, fontFamily: "'Outfit',sans-serif", fontWeight: 800, fontSize: "0.95rem", transition: "all 0.2s" }}
-        >Continue →</button>
+        )}
       </div>
-    </div>,
+      <div className="yr-onboarding-footer">
+        <button className="yr-onboarding-back" onClick={back}>← Back</button>
+        <button className="yr-hub-cta" onClick={next} disabled={!cycleOption || (cycleOption === "track" && !cycleStart)}>Continue</button>
+      </div>
+    </ScreenWrapper>,
 
-    // Step 3: Equipment
-    <div key="step3">
-      <div style={{ fontSize: "2rem", marginBottom: 8 }}>🏋️</div>
-      <h2 style={{ fontFamily: "'Outfit',sans-serif", fontWeight: 900, fontSize: "1.4rem", marginBottom: 6 }}>
-        What equipment do you have?
-      </h2>
-      <p style={{ color: T.muted, fontSize: "0.82rem", marginBottom: 20, lineHeight: 1.6 }}>
-        Select everything available to you. We'll build plans around what you have.
-      </p>
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 24 }}>
+    // Step 4: Equipment
+    <ScreenWrapper 
+      key="equip"
+      title="Your Space" 
+      subtitle="We'll construct your plan based on what's available."
+      eyebrow="Logistics"
+    >
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(140px, 1fr))", gap: 10, maxWidth: 640, margin: "0 auto" }}>
         {EQUIPMENT_OPTIONS.map(eq => (
-          <button key={eq.id} style={btn(equipment.includes(eq.id), T.teal)} onClick={() => toggleEquip(eq.id)}>
+          <button 
+            key={eq.id} 
+            className={`yr-onboarding-chip ${equipment.includes(eq.id) ? "active" : ""}`}
+            onClick={() => toggleEquip(eq.id)}
+          >
             <span>{eq.icon}</span> {eq.label}
           </button>
         ))}
       </div>
-      <div style={{ display: "flex", gap: 8 }}>
-        <button onClick={() => setStep(gender === "female" ? 2 : 1)} style={{ flex: 1, padding: "12px 0", borderRadius: 14, border: `1px solid ${T.border}`, background: "transparent", color: T.muted, fontFamily: "'Outfit',sans-serif", fontWeight: 700, cursor: "pointer" }}>← Back</button>
-        <button
-          onClick={finish}
-          disabled={equipment.length === 0}
-          style={{ flex: 2, padding: "12px 0", borderRadius: 14, border: "none", cursor: equipment.length > 0 ? "pointer" : "not-allowed", background: equipment.length > 0 ? `linear-gradient(135deg,${T.teal},${T.violet})` : T.card2, color: equipment.length > 0 ? "#fff" : T.muted, fontFamily: "'Outfit',sans-serif", fontWeight: 800, fontSize: "0.95rem", transition: "all 0.2s" }}
-        >Let's go 🚀</button>
+      <div className="yr-onboarding-footer">
+        <button className="yr-onboarding-back" onClick={() => setStep(gender === "female" ? 3 : 2)}>← Back</button>
+        <button className="yr-hub-cta" onClick={finish} disabled={equipment.length === 0}>Complete Setup</button>
       </div>
-    </div>,
+    </ScreenWrapper>
   ];
 
   return (
-    <div style={{ minHeight: "100vh", background: T.bg, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
-      <style>{`@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700;800;900&display=swap'); *{box-sizing:border-box;margin:0;padding:0} body{background:${T.bg};color:${T.text}}`}</style>
-      <div style={{ width: "100%", maxWidth: 440 }}>
-        {/* Progress dots */}
-        <div style={{ display: "flex", gap: 6, justifyContent: "center", marginBottom: 28 }}>
-          {[0, 1, 2, 3].map(i => (
-            <div key={i} style={{ width: i === step ? 20 : 8, height: 8, borderRadius: 100, background: i <= step ? T.pink : T.card2, transition: "all 0.3s" }} />
-          ))}
-        </div>
-        <div style={{ background: T.card, border: `1px solid ${T.border}`, borderRadius: 24, padding: "28px 24px" }}>
-          {STEPS[step]}
-        </div>
+    <div className="yr-onboarding-layout">
+      {/* Progress Line */}
+      <div className="yr-onboarding-progress">
+        <div className="yr-onboarding-progress-fill" style={{ width: `${(step / (STEPS.length - 1)) * 100}%` }}></div>
       </div>
+
+      <div className="yr-onboarding-inner">
+        {STEPS[step]}
+      </div>
+
+      <style>{`
+        .yr-onboarding-layout {
+          position: fixed;
+          inset: 0;
+          z-index: 100;
+          background: transparent;
+          color: var(--yr-text);
+          display: flex;
+          flex-direction: column;
+          overflow: hidden;
+          font-family: var(--font-body);
+        }
+        
+        .yr-onboarding-progress {
+          position: absolute;
+          top: 0; left: 0; right: 0;
+          height: 2px;
+          background: var(--yr-surface);
+          z-index: 10;
+        }
+        .yr-onboarding-progress-fill {
+          height: 100%;
+          background: var(--phase-accent);
+          transition: width 0.6s cubic-bezier(0.2, 1, 0.3, 1);
+        }
+
+        .yr-onboarding-inner {
+          position: relative;
+          z-index: 5;
+          flex: 1;
+          display: flex;
+          flex-direction: column;
+        }
+
+        .yr-onboarding-screen {
+          flex: 1;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          padding: 40px 24px;
+        }
+
+        .yr-onboarding-content {
+          width: 100%;
+          max-width: 800px;
+          margin-bottom: 60px;
+        }
+
+        /* Component: Tiles */
+        .yr-onboarding-tile {
+          background: var(--yr-bg-elev);
+          border: 1px solid var(--yr-border);
+          border-radius: 20px;
+          padding: 24px;
+          text-align: left;
+          transition: all 0.2s ease;
+          display: flex;
+          flex-direction: column;
+          gap: 8px;
+          cursor: pointer;
+        }
+        .yr-onboarding-tile:hover { border-color: var(--yr-border-strong); transform: translateY(-2px); }
+        .yr-onboarding-tile.active { border-color: var(--phase-accent); background: var(--yr-surface-2); }
+        .yr-onboarding-tile-icon { fontSize: 24px; margin-bottom: 4px; }
+        .yr-onboarding-tile-label { fontSize: 16px; font-weight: 600; color: var(--yr-text); }
+        .yr-onboarding-tile-desc { fontSize: 12px; color: var(--yr-muted); line-height: 1.4; }
+
+        /* Component: Rows */
+        .yr-onboarding-row {
+          background: var(--yr-bg-elev);
+          border: 1px solid var(--yr-border);
+          border-radius: 16px;
+          padding: 16px 20px;
+          display: flex;
+          align-items: center;
+          gap: 16px;
+          cursor: pointer;
+          transition: all 0.2s ease;
+        }
+        .yr-onboarding-row:hover { border-color: var(--yr-border-strong); }
+        .yr-onboarding-row.active { border-color: var(--phase-accent); background: var(--yr-surface-2); }
+
+        /* Component: Chips */
+        .yr-onboarding-chip {
+          background: var(--yr-bg-elev);
+          border: 1px solid var(--yr-border);
+          border-radius: 99px;
+          padding: 12px 20px;
+          font-size: 13px;
+          font-weight: 500;
+          color: var(--yr-text-2);
+          cursor: pointer;
+          transition: all 0.2s;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 8px;
+        }
+        .yr-onboarding-chip:hover { border-color: var(--yr-border-strong); }
+        .yr-onboarding-chip.active { border-color: var(--phase-accent); color: var(--phase-accent); background: var(--yr-surface-2); }
+
+        /* Component: Subpanel */
+        .yr-onboarding-subpanel {
+          margin-top: 12px;
+          padding: 24px;
+          background: var(--yr-surface);
+          border: 1px solid var(--yr-border);
+          border-radius: 20px;
+        }
+
+        /* Footer */
+        .yr-onboarding-footer {
+          margin-top: 40px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 20px;
+        }
+        .yr-onboarding-back {
+          background: transparent;
+          border: none;
+          color: var(--yr-muted);
+          font-size: 14px;
+          font-weight: 500;
+          cursor: pointer;
+        }
+        .yr-onboarding-back:hover { color: var(--yr-text-2); }
+
+        .yr-hub-cta:disabled {
+          opacity: 0.4;
+          cursor: not-allowed;
+          filter: grayscale(1);
+        }
+      `}</style>
     </div>
   );
 }

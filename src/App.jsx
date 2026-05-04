@@ -11,6 +11,7 @@ import NutritionTab from "./components/NutritionTab";
 import GutResetTab from "./components/GutResetTab";
 import SettingsPage from "./components/SettingsPage";
 import ExerciseModal from "./components/ExerciseModal";
+import BackgroundAtmosphere from "./components/BackgroundAtmosphere";
 import { useTweaks } from "./components/MotionHooks";
 
 const TWEAK_DEFAULTS = {
@@ -165,7 +166,7 @@ export default function App() {
   }, []);
 
   const handleOnboardingComplete = (p) => { Storage.set("profile", p); setProfile(p); };
-  if (!profile) return <Onboarding onComplete={handleOnboardingComplete} />;
+
 
   const day = WEEK_PLAN[new Date().getDay()];
   const visibleTabs = TABS.filter(t => t.id !== "cycle" || profile?.cycleTracking);
@@ -188,12 +189,13 @@ export default function App() {
 
   return (
     <div className="yr-app">
+      <BackgroundAtmosphere />
       {/* Header */}
       <header className="yr-header">
         <div className="yr-header-inner">
           <div className="yr-brand">
             <div className="yr-brand-mark">YR</div>
-            <div className="yr-brand-name"><b>{profile.name}</b><span>'s Reset</span></div>
+            <div className="yr-brand-name"><b>{profile?.name || "YourReset"}</b>{profile ? <span>'s Reset</span> : null}</div>
           </div>
           <button className="yr-theme-toggle" onClick={() => setTweak("theme", tweaks.theme === "dark" ? "light" : "dark")}>
             {tweaks.theme === "dark" ? "Light" : "Dark"}
@@ -214,12 +216,55 @@ export default function App() {
       {/* Main content */}
       <div className="yr-shell">
         <main className="yr-main yr-tab-fade" key={replayKey}>
-          {tab === "today"    && <PlanTab day={day} selectedDay={new Date().getDay()} setSelectedDay={() => {}} done={done} setDone={setDone} setModal={setModal} readiness={readiness} showReadiness={showReadiness} setReadiness={setReadiness} setShowReadiness={setShowReadiness} cycleState={cycleState} profile={profile} weekKey={weekKey} swapped={swapped} onSwap={onSwap} onUndoSwap={onUndoSwap} dbReady={dbReady} motion={tweaks.motion} />}
-          {tab === "progress" && <MetricsTab liveData={liveData} motion={tweaks.motion} />}
-          {tab === "cycle"    && profile?.cycleTracking && <CycleTab cycleState={cycleState} profile={profile} onResetProfile={() => { Storage.set("profile", null); setProfile(null); }} onUpdateProfile={onUpdateProfile} motion={tweaks.motion} />}
-          {tab === "fuel"     && <NutritionTab cycleState={cycleState} profile={profile} motion={tweaks.motion} />}
-          {tab === "gut"      && <GutResetTab profile={profile} cycleState={cycleState} motion={tweaks.motion} />}
-          {tab === "you"      && <SettingsPage profile={profile} onSave={(p) => { Storage.set("profile", p); setProfile(p); }} />}
+  {!profile ? (
+    <Onboarding onComplete={handleOnboardingComplete} />
+  ) : (
+    <>
+      {tab === "today" && (
+        <PlanTab
+          day={day}
+          selectedDay={new Date().getDay()}
+          setSelectedDay={() => {}}
+          done={done}
+          setDone={setDone}
+          setModal={setModal}
+          readiness={readiness}
+          showReadiness={showReadiness}
+          setReadiness={setReadiness}
+          setShowReadiness={setShowReadiness}
+          cycleState={cycleState}
+          profile={profile}
+          weekKey={weekKey}
+          swapped={swapped}
+          onSwap={onSwap}
+          onUndoSwap={onUndoSwap}
+          dbReady={dbReady}
+          motion={tweaks.motion}
+        />
+      )}
+      {tab === "progress" && (
+        <MetricsTab liveData={liveData} motion={tweaks.motion} />
+      )}
+      {tab === "cycle" && profile?.cycleTracking && (
+        <CycleTab
+          cycleState={cycleState}
+          profile={profile}
+          onResetProfile={() => { Storage.set("profile", null); setProfile(null); }}
+          onUpdateProfile={onUpdateProfile}
+          motion={tweaks.motion}
+        />
+      )}
+      {tab === "fuel" && (
+        <NutritionTab cycleState={cycleState} profile={profile} motion={tweaks.motion} />
+      )}
+      {tab === "gut" && (
+        <GutResetTab profile={profile} cycleState={cycleState} motion={tweaks.motion} />
+      )}
+      {tab === "you" && (
+        <SettingsPage profile={profile} onSave={(p) => { Storage.set("profile", p); setProfile(p); }} />
+      )}
+    </>
+  )}
         </main>
       </div>
 

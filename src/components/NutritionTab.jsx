@@ -21,10 +21,10 @@ export default function NutritionTab({ cycleState, profile, motion = "full" }) {
     ? `${PHASE_EMOJI[phase]} ${cycleState?.label} Nutrition`
     : `${goal.replace("_"," ")} Nutrition`;
 
-  const kcalTarget = phase === "luteal_late" ? 2050 : 1820;
+  const kcalTarget = d.kcalTarget || 2000;
   const kcalAnim = useCountUp(kcalTarget, { duration:1100, enabled:animOn });
 
-  const macros = [
+  const macros = d.macros || [
     { key:"protein",  label:"Protein",  val:"128g", pct:"35%", c:"var(--phase-accent)" },
     { key:"carbs",    label:"Carbs",    val:"215g", pct:"25%", c:"color-mix(in oklch, var(--phase-accent) 50%, transparent)" },
     { key:"fat",      label:"Fat",      val:"62g",  pct:"20%", c:"var(--yr-text-2)" },
@@ -76,7 +76,7 @@ export default function NutritionTab({ cycleState, profile, motion = "full" }) {
 
       {/* Phase guidance */}
       <div>
-        <div className="yr-overline">Phase guidance</div>
+        <div className="yr-overline">{phase ? "Phase guidance" : "Goal guidance"}</div>
         <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit,minmax(220px,1fr))", borderTop:"1px solid var(--yr-border)" }}>
           {cards.map((c, i) => (
             <div key={c.key} className={animOn ? "yr-anim-ledger-row" : ""} style={{ borderBottom:"1px solid var(--yr-border)", padding:"16px 16px 16px 0", "--i":i }}>
