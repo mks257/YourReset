@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { PHASES, PHASE_EMOJI, PCOS_GUIDANCE, getPhaseWindows, phaseLabel } from "../cycleEngine";
 
 // ── Phase card — expanded with science-honest content ─────────────────────
@@ -91,7 +91,44 @@ function PhaseCard({ phaseKey, isNow, windows, cycleLength }) {
 }
 
 // ── Main component ────────────────────────────────────────────────────────
-export default function CycleTab({ cycleState, profile, onResetProfile }) {
+// ── Cycle length stepper ──────────────────────────────────────────────────
+function CycleLengthPicker({ value, onChange }) {
+  // useRef tracks value synchronously — rapid taps accumulate before React re-renders
+  const cur = useRef(value);
+  const [displayed, setDisplayed] = useState(value);
+  useEffect(() => { cur.current = value; setDisplayed(value); }, [value]);
+
+  const step = (delta) => {
+    const next = Math.min(45, Math.max(21, cur.current + delta));
+    cur.current = next;
+    setDisplayed(next);   // triggers display re-render
+    onChange(next);       // persists to profile
+  };
+  const btnStyle = {
+    width:28, height:28, borderRadius:8, border:"1px solid var(--yr-border)",
+    background:"rgba(255,255,255,0.06)", color:"var(--yr-text)", fontSize:16,
+    fontWeight:700, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center",
+    lineHeight:1, transition:"background 0.12s",
+  };
+  return (
+    <div style={{ display:"flex", alignItems:"center", gap:10, padding:"12px 14px",
+      background:"var(--yr-card)", border:"1px solid var(--yr-border)", borderRadius:14 }}>
+      <div style={{ flex:1 }}>
+        <div style={{ fontWeight:700, fontSize:13, color:"var(--yr-text)" }}>My cycle length</div>
+        <div style={{ fontSize:11, color:"var(--yr-muted)", marginTop:1 }}>Typical range: 21–45 days · 95% of cycles</div>
+      </div>
+      <div style={{ display:"flex", alignItems:"center", gap:8 }}>
+        <button style={btnStyle} onClick={() => step(-1)}>−</button>
+        <span style={{ fontWeight:900, fontSize:18, color:"var(--phase-accent)", minWidth:52, textAlign:"center", letterSpacing:"-0.03em" }}>
+          {displayed} <span style={{ fontSize:11, fontWeight:500, color:"var(--yr-muted)" }}>days</span>
+        </span>
+        <button style={btnStyle} onClick={() => step(+1)}>+</button>
+      </div>
+    </div>
+  );
+}
+
+export default function CycleTab({ cycleState, profile, onResetProfile, onUpdateProfile }) {
   const [showPcos, setShowPcos] = useState(false);
 
   const cycleLength = cycleState?.cycleLength || profile?.cycleLength || 28;
@@ -194,6 +231,14 @@ export default function CycleTab({ cycleState, profile, onResetProfile }) {
           </div>
         )}
       </div>
+
+      {/* ── Cycle length input — activates the whole variable-window engine ── */}
+      {cycleState && onUpdateProfile && (
+        <CycleLengthPicker
+          value={cycleLength}
+          onChange={(n) => onUpdateProfile({ cycleLength: n })}
+        />
+      )}
 
       {/* ── Your cycle map — dynamic length ── */}
       <div style={{ background:"var(--yr-card)", border:"1px solid var(--yr-border)", borderRadius:20, padding:"16px 18px" }}>

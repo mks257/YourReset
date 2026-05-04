@@ -145,7 +145,19 @@ export default function App() {
           />
         )}
         {tab === "metrics"   && <MetricsTab liveData={liveData} />}
-        {tab === "cycle"     && <CycleTab cycleState={cycleState} profile={profile} onResetProfile={() => { Storage.set('profile', null); setProfile(null); }} />}
+        {tab === "cycle"     && <CycleTab
+            cycleState={cycleState}
+            profile={profile}
+            onResetProfile={() => { Storage.set('profile', null); setProfile(null); }}
+            onUpdateProfile={(updates) => {
+              // Read latest from localStorage so rapid calls chain correctly
+              // (React state is async; localStorage is synchronous)
+              const current = Storage.get('profile', {});
+              const p = { ...current, ...updates };
+              Storage.set('profile', p);
+              setProfile(p);
+            }}
+          />}
         {tab === "nutrition" && <NutritionTab cycleState={cycleState} profile={profile} />}
         {tab === "gut"       && <GutResetTab profile={profile} cycleState={cycleState} />}
         {tab === "settings"  && <SettingsPage profile={profile} onSave={(p) => { Storage.set('profile', p); setProfile(p); }} />}
