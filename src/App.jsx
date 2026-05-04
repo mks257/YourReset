@@ -14,7 +14,7 @@ import ExerciseModal from "./components/ExerciseModal";
 import { useTweaks } from "./components/MotionHooks";
 
 const TWEAK_DEFAULTS = {
-  direction: "bento",
+  direction: "editorial",
   theme: "dark",
   density: "balanced",
   phase: "follicular",

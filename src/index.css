@@ -284,9 +284,11 @@ button:focus-visible { outline: 2px solid var(--phase-accent); outline-offset: 2
   margin-bottom: 8px;
 }
 .yr-hub-title {
-  font-size: clamp(20px, 3.6vw, 32px);
-  font-weight: 600;
-  letter-spacing: -0.025em;
+  font-family: var(--font-serif);
+  font-size: clamp(22px, 4vw, 38px);
+  font-weight: 400;
+  font-style: italic;
+  letter-spacing: -0.02em;
   line-height: 1.05;
   margin: 0 0 6px;
 }
@@ -749,8 +751,14 @@ button:focus-visible { outline: 2px solid var(--phase-accent); outline-offset: 2
   background: var(--yr-bg-elev);
   border-radius: 14px;
 }
+/* Bento: keep serif but upright and heavier */
 [data-direction="bento"] .yr-display {
-  font-weight: 600;
+  font-style: normal;
+  font-weight: 500;
+}
+[data-direction="bento"] .yr-hub-title {
+  font-style: normal;
+  font-weight: 500;
 }
 
 [data-direction="calm"] {
@@ -801,10 +809,20 @@ button:focus-visible { outline: 2px solid var(--phase-accent); outline-offset: 2
   --yr-border-strong: rgba(0,0,0,0.45);
   --phase-accent: #1a1a1a;
 }
+/* Brutalist: force Geist, no italic — sport/high contrast vibe */
 [data-direction="brutalist"] .yr-display {
+  font-family: var(--font-display);
+  font-style: normal;
   font-weight: 800;
   letter-spacing: -0.045em;
   text-transform: uppercase;
+}
+[data-direction="brutalist"] .yr-hub-title {
+  font-family: var(--font-display);
+  font-style: normal;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: -0.04em;
 }
 [data-direction="brutalist"] .yr-step, [data-direction="brutalist"] .yr-hub-node {
   border-radius: 0;
@@ -1095,7 +1113,10 @@ button:focus-visible { outline: 2px solid var(--phase-accent); outline-offset: 2
   font-size: 11px;
 }
 
-/* ─── Display helper ─────────────────────────────────────────────────────── */
+/* ─── Display helper — Fraunces italic as default for all hero/display text ── */
 .yr-display {
-  font-family: var(--font-display);
+  font-family: var(--font-serif);
+  font-weight: 400;
+  font-style: italic;
+  letter-spacing: -0.025em;
 }
