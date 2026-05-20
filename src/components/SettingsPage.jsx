@@ -3,6 +3,40 @@ import * as Storage from "../storage";
 import { Filesystem, Directory, Encoding } from "@capacitor/filesystem";
 import { Share } from "@capacitor/share";
 import { Capacitor } from "@capacitor/core";
+import { Browser } from "@capacitor/browser";
+import DeleteAccountSheet from "./DeleteAccountSheet";
+
+// External URLs. Replace with real hosting when ready. The Manage Subscription
+// link uses the itms-apps scheme on iOS which opens the Subscriptions screen
+// directly in Settings; on web/Android we fall back to the App Store URL.
+const PRIVACY_URL = "https://yourreset.app/privacy";
+const TERMS_URL   = "https://yourreset.app/terms";
+const SUBSCRIPTION_DEEP_LINK_IOS = "itms-apps://apps.apple.com/account/subscriptions";
+const SUBSCRIPTION_WEB_FALLBACK  = "https://apps.apple.com/account/subscriptions";
+
+// Toggle this once a real paywall ships. Until then we still show the row
+// (App Store reviewers expect it) but it links to the App Store account
+// subscriptions page, which is harmless if the user has no active subscription.
+const SHOW_MANAGE_SUBSCRIPTION = true;
+
+async function openExternal(url) {
+  try {
+    await Browser.open({ url, presentationStyle: "popover" });
+  } catch (err) {
+    // Web fallback
+    if (typeof window !== "undefined") window.open(url, "_blank", "noopener,noreferrer");
+  }
+}
+
+async function openManageSubscription() {
+  if (Capacitor.getPlatform() === "ios") {
+    // itms-apps must be opened via window.location (Browser plugin filters it).
+    // WKWebView passes the scheme through to UIApplication.openURL on iOS.
+    if (typeof window !== "undefined") window.location.href = SUBSCRIPTION_DEEP_LINK_IOS;
+    return;
+  }
+  await openExternal(SUBSCRIPTION_WEB_FALLBACK);
+}
 
 const GOALS      = ["fat loss","muscle tone","endurance","strength","flexibility","wellness"];
 const EQUIPMENT  = ["bodyweight","dumbbells","barbell","bands","kettlebell","machines","cable","cardio"];
@@ -46,8 +80,7 @@ export default function SettingsPage({ profile, onSave, onClearAll, theme, onSet
   const [activityLevel, setActivityLevel] = useState(profile.activityLevel || "moderate");
 
   const [saved,        setSaved]        = useState(false);
-  const [demoCleared,  setDemoCleared]  = useState(null);
-  const [clearConfirm, setClearConfirm] = useState(false);
+  const [deleteSheetOpen, setDeleteSheetOpen] = useState(false);
 
   const toggleEquip = (eq) =>
     setEquipment(prev => prev.includes(eq) ? prev.filter(e => e !== eq) : [...prev, eq]);
@@ -107,12 +140,11 @@ export default function SettingsPage({ profile, onSave, onClearAll, theme, onSet
     a.click(); URL.revokeObjectURL(url);
   };
 
-  const handleClearAll = async () => {
-    if (!clearConfirm) { setClearConfirm(true); return; }
+  // Single destructive action. Triggered by the bottom-sheet confirm,
+  // which itself requires the user to type DELETE. After clearing, App.jsx
+  // resets React state and routes back to onboarding (no window.reload).
+  const handleDeleteAccount = async () => {
     await Storage.clearAll();
-    // Tell App.jsx to reset React state and route back to onboarding.
-    // No window.location.reload() — that flashes white in WKWebView and
-    // breaks the native shell transition.
     if (onClearAll) onClearAll();
   };
 
@@ -336,25 +368,105 @@ export default function SettingsPage({ profile, onSave, onClearAll, theme, onSet
         </div>
       )}
 
-      {/* Data & privacy */}
+      {/* Account & privacy — App Store-required actions live here. */}
       <div style={{ borderTop: "1px solid var(--yr-border)", paddingTop: 20 }}>
-        <div className="yr-overline">Data & privacy</div>
+        <div className="yr-overline">Account & privacy</div>
         <p style={{ fontSize: 12, color: "var(--yr-muted)", margin: "8px 0 16px", lineHeight: 1.6 }}>
           All data is stored on this device only. Nothing is sent to any server.
         </p>
-        <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
-          <button onClick={handleExport} style={{ padding: "9px 16px", borderRadius: 10, border: "1px solid var(--yr-border)", background: "transparent", color: "var(--yr-text-2)", cursor: "pointer", fontFamily: "inherit", fontSize: 13 }}>
-            Export data
-          </button>
-          <button onClick={handleClearAll} style={{ padding: "9px 16px", borderRadius: 10, border: `1px solid ${clearConfirm ? "#f87171" : "var(--yr-border)"}`, background: clearConfirm ? "rgba(248,113,113,0.1)" : "transparent", color: clearConfirm ? "#f87171" : "var(--yr-muted)", cursor: "pointer", fontFamily: "inherit", fontSize: 13 }}>
-            {clearConfirm ? "Confirm clear all" : "Clear all data"}
-          </button>
-          {clearConfirm && <button onClick={() => setClearConfirm(false)} style={{ padding: "9px 16px", borderRadius: 10, border: "none", background: "transparent", color: "var(--yr-muted)", cursor: "pointer", fontFamily: "inherit", fontSize: 13 }}>Cancel</button>}
+
+        {/* Action rows — iOS-style list, full-width tappable rows */}
+        <div className="yr-settings-rows">
+          <SettingsRow
+            label="Privacy Policy"
+            helper="How your data is handled"
+            trailing="→"
+            onTap={() => openExternal(PRIVACY_URL)}
+          />
+          <SettingsRow
+            label="Terms of Service"
+            helper="Conditions of use"
+            trailing="→"
+            onTap={() => openExternal(TERMS_URL)}
+          />
+          {SHOW_MANAGE_SUBSCRIPTION && (
+            <SettingsRow
+              label="Manage Subscription"
+              helper="Opens iOS Settings → Subscriptions"
+              trailing="→"
+              onTap={openManageSubscription}
+            />
+          )}
+          <SettingsRow
+            label="Export my data"
+            helper="Save a JSON copy via the share sheet"
+            trailing="↗"
+            onTap={handleExport}
+          />
+          <SettingsRow
+            label="Delete account & all data"
+            helper="Permanently remove everything from this device"
+            trailing="⚠︎"
+            destructive
+            onTap={() => setDeleteSheetOpen(true)}
+          />
         </div>
-        <div style={{ marginTop: 16, fontSize: 11, color: "var(--yr-faint)", lineHeight: 1.6 }}>
-          Medical disclaimer: YourReset provides wellness guidance for informational purposes only. Not a substitute for professional medical advice.
+
+        <div style={{ marginTop: 20, fontSize: 11, color: "var(--yr-faint)", lineHeight: 1.6 }}>
+          Medical disclaimer: YourReset provides wellness and fitness guidance for
+          informational purposes only. It is not a medical service and does not
+          provide medical advice, diagnosis, or treatment. Consult a qualified
+          healthcare professional before starting any fitness or nutrition program.
         </div>
       </div>
+
+      <DeleteAccountSheet
+        open={deleteSheetOpen}
+        onCancel={() => setDeleteSheetOpen(false)}
+        onConfirm={handleDeleteAccount}
+      />
     </div>
+  );
+}
+
+/**
+ * iOS-style settings row. Full-width tap target, label + helper text,
+ * trailing glyph. Destructive variant tints the label red.
+ */
+function SettingsRow({ label, helper, trailing, onTap, destructive = false }) {
+  return (
+    <button
+      onClick={onTap}
+      style={{
+        display: "flex", alignItems: "center", gap: 12,
+        width: "100%", padding: "14px 16px",
+        background: "var(--yr-surface)",
+        border: "1px solid var(--yr-border)",
+        borderRadius: 14,
+        marginBottom: 8,
+        cursor: "pointer",
+        fontFamily: "inherit",
+        textAlign: "left",
+        minHeight: 56,
+      }}
+    >
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{
+          fontSize: 14, fontWeight: 500,
+          color: destructive ? "#fc8181" : "var(--yr-text)",
+        }}>{label}</div>
+        {helper && (
+          <div style={{
+            fontSize: 11, color: "var(--yr-muted)",
+            marginTop: 2,
+          }}>{helper}</div>
+        )}
+      </div>
+      <span aria-hidden="true" style={{
+        fontSize: 16,
+        color: destructive ? "#fc8181" : "var(--yr-muted)",
+        fontFamily: "var(--font-mono)",
+      }}>{trailing}</span>
+    </button>
   );
 }
