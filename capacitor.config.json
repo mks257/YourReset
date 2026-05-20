@@ -1,5 +1,12 @@
 {
-  "appId": "com.yourreset.healthlive",
-  "appName": "Health Live",
-  "webDir": "dist"
+  "appId": "com.yourreset.app",
+  "appName": "YourReset",
+  "webDir": "dist",
+  "ios": {
+    "contentInset": "always",
+    "backgroundColor": "#080912"
+  },
+  "server": {
+    "androidScheme": "https"
+  }
 }
