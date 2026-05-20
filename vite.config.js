@@ -5,4 +5,13 @@ import react from '@vitejs/plugin-react'
 export default defineConfig({
   plugins: [react()],
   base: './', // Ensures assets are loaded smoothly in Capacitor mobile app
+  server: {
+    proxy: {
+      '/higgsfield': {
+        target: 'https://platform.higgsfield.ai',
+        changeOrigin: true,
+        rewrite: path => path.replace(/^\/higgsfield/, ''),
+      },
+    },
+  },
 })
