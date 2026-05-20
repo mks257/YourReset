@@ -254,13 +254,9 @@ export const SWAP_LIBRARY_BANDS = {
   },
 };
 
-// ── Live health data ───────────────────────────────────────────────────────
-export const HEALTH_SNAPSHOT = {
-  steps: 5943, stepGoal: 10000,
-  kcal: 210, kcalGoal: 500,
-  rhr: 70, exMin: 22,
-  weight: 63.5, age: 25,
-};
+// Removed: HEALTH_SNAPSHOT hardcoded fake metrics. Live data now comes from
+// useLiveHealth() (Apple HealthKit on iOS) or null on web. Goals (stepGoal,
+// kcalGoal) are user-configurable in profile via Settings.
 
 // ── 7-Day Workout Plan ─────────────────────────────────────────────────────
 export const WEEK_PLAN = [
