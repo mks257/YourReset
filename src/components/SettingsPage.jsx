@@ -15,7 +15,7 @@ const ACTIVITIES = [
   { id:"very_active", label:"Very Active", sub:"2× daily / hard labour" },
 ];
 
-export default function SettingsPage({ profile, onSave, onClearAll }) {
+export default function SettingsPage({ profile, onSave, onClearAll, theme, onSetTheme }) {
   // Existing fields
   const [name,      setName]      = useState(profile.name || "");
   const [goal,      setGoal]      = useState(profile.goal || "fat_loss");
@@ -307,6 +307,34 @@ export default function SettingsPage({ profile, onSave, onClearAll }) {
       }}>
         {saved ? "Saved ✓" : "Save changes"}
       </button>
+
+      {/* Appearance — theme toggle, moved here from the header to free up
+          top-bar space on mobile. */}
+      {onSetTheme && (
+        <div style={{ borderTop: "1px solid var(--yr-border)", paddingTop: 20 }}>
+          <div className="yr-overline">Appearance</div>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: 12 }}>
+            <div>
+              <div style={{ fontSize: 14, fontWeight: 500, color: "var(--yr-text)" }}>Theme</div>
+              <div style={{ fontSize: 12, color: "var(--yr-muted)", marginTop: 2 }}>
+                {theme === "dark" ? "Dark mode for low light" : "Light mode for daytime"}
+              </div>
+            </div>
+            <div className="yr-pills">
+              {["dark", "light"].map(t => (
+                <button
+                  key={t}
+                  className={`yr-pill${theme === t ? " active" : ""}`}
+                  onClick={() => onSetTheme(t)}
+                  aria-pressed={theme === t}
+                >
+                  {t === "dark" ? "🌙 Dark" : "☀️ Light"}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Data & privacy */}
       <div style={{ borderTop: "1px solid var(--yr-border)", paddingTop: 20 }}>

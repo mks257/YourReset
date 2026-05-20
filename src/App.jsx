@@ -33,14 +33,19 @@ const PHASE_ACCENT_MAP = {
   other:        "#8cc8ff",
 };
 
+// Bottom nav follows the iOS HIG: cap visible tabs at 5, icon above label.
+// `primary: false` tabs are still routable via setTab() but hidden from the
+// bottom nav. Progress is hidden until HealthKit lands (data is currently
+// fake). Friends is hidden until a real social/sync layer exists. Both can
+// be restored by flipping primary to true.
 const TABS = [
-  { id:"today",    letter:"T", label:"Today" },
-  { id:"progress", letter:"P", label:"Progress" },
-  { id:"cycle",    letter:"C", label:"Cycle" },
-  { id:"fuel",     letter:"F", label:"Fuel" },
-  { id:"gut",      letter:"G", label:"Gut" },
-  { id:"friends",  letter:"Fd", label:"Friends" },
-  { id:"you",      letter:"Y", label:"You" },
+  { id:"today",    icon:"☀️", label:"Today",    primary:true  },
+  { id:"cycle",    icon:"🌙", label:"Cycle",    primary:true  },
+  { id:"fuel",     icon:"🥗", label:"Fuel",     primary:true  },
+  { id:"gut",      icon:"🫐", label:"Gut",      primary:true  },
+  { id:"you",      icon:"👤", label:"You",      primary:true  },
+  { id:"progress", icon:"📊", label:"Progress", primary:false },
+  { id:"friends",  icon:"👥", label:"Friends",  primary:false },
 ];
 
 // ── Tweaks panel ─────────────────────────────────────────────────────────
@@ -171,7 +176,10 @@ export default function App() {
 
 
   const day = WEEK_PLAN[new Date().getDay()];
-  const visibleTabs = TABS.filter(t => t.id !== "cycle" || profile?.cycleTracking);
+  // Hide the cycle tab if the user opted out of cycle tracking in onboarding.
+  const enabledTabs = TABS.filter(t => t.id !== "cycle" || profile?.cycleTracking);
+  // Bottom nav only renders primary tabs (capped at 5 per iOS HIG).
+  const bottomNavTabs = enabledTabs.filter(t => t.primary);
   const phaseNote = modal && cycleState ? buildPhaseNote(modal.type, cycleState.intensity) : null;
 
   const onSwap = (exId, explicitSwap) => {
@@ -196,25 +204,13 @@ export default function App() {
   return (
     <div className="yr-app">
       <BackgroundAtmosphere />
-      {/* Header */}
+      {/* Header — brand only. Theme toggle moved to Settings; desktop tab bar
+          removed (mobile-first design with bottom nav). */}
       <header className="yr-header">
         <div className="yr-header-inner">
           <div className="yr-brand">
             <div className="yr-brand-mark">YR</div>
             <div className="yr-brand-name"><b>{profile?.name || "YourReset"}</b>{profile ? <span>'s Reset</span> : null}</div>
-          </div>
-          <button className="yr-theme-toggle" onClick={() => setTweak("theme", tweaks.theme === "dark" ? "light" : "dark")}>
-            {tweaks.theme === "dark" ? "Light" : "Dark"}
-          </button>
-        </div>
-        {/* Desktop tab bar */}
-        <div className="yr-tabbar">
-          <div className="yr-tabbar-inner">
-            {visibleTabs.map(t => (
-              <button key={t.id} className={`yr-tab${tab === t.id ? " active" : ""}`} onClick={() => setTab(t.id)}>
-                {t.label}
-              </button>
-            ))}
           </div>
         </div>
       </header>
@@ -275,6 +271,8 @@ export default function App() {
       {tab === "you" && (
         <SettingsPage
           profile={profile}
+          theme={tweaks.theme}
+          onSetTheme={(t) => setTweak("theme", t)}
           onSave={(p) => { Storage.set("profile", p); setProfile(p); }}
           onClearAll={() => {
             // Storage.clearAll() has already wiped Preferences; here we
@@ -295,18 +293,25 @@ export default function App() {
         </main>
       </div>
 
-      {/* Mobile bottom nav */}
-      <nav className="yr-mobile-nav">
-        {visibleTabs.map(t => (
-          <button key={t.id} className={`yr-mnav-btn${tab === t.id ? " active" : ""}`} onClick={() => setTab(t.id)}>
-            <span className="yr-mnav-letter">{t.letter}</span>
+      {/* Mobile bottom nav — primary tabs only, icon above label (iOS pattern). */}
+      <nav className="yr-mobile-nav" aria-label="Primary">
+        {bottomNavTabs.map(t => (
+          <button
+            key={t.id}
+            className={`yr-mnav-btn${tab === t.id ? " active" : ""}`}
+            onClick={() => setTab(t.id)}
+            aria-label={t.label}
+            aria-current={tab === t.id ? "page" : undefined}
+          >
+            <span className="yr-mnav-icon" aria-hidden="true">{t.icon}</span>
             <span className="yr-mnav-label">{t.label}</span>
           </button>
         ))}
       </nav>
 
-      {/* Tweaks */}
-      <TweaksPanel tweaks={tweaks} setTweak={setTweak} />
+      {/* Tweaks panel: development only. Vite tree-shakes this out of
+          production builds when import.meta.env.DEV is statically false. */}
+      {import.meta.env.DEV && <TweaksPanel tweaks={tweaks} setTweak={setTweak} />}
 
       {/* Exercise modal */}
       {modal && (() => {
