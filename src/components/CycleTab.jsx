@@ -9,21 +9,51 @@ export default function CycleTab({ cycleState, profile, readiness, setReadiness,
   const [opkConfirmed, setOpkConfirmed] = useState(false);
   const [showNextPhaseDetails, setShowNextPhaseDetails] = useState(false);
   
+  // Normalize legacy string-typed readiness (e.g. { sleep: "good", soreness: "mild" })
+  // into the integer 1..5 schema this component uses. Necessary because previous
+  // versions of ReadinessCheck wrote strings; on upgrade we don't want sliders
+  // to reset to defaults when reading old data.
+  const READINESS_DEFAULTS = { energy: 3, mood: 3, cramps: 1, sleep: 3, soreness: 1 };
+  const STRING_TO_INT = {
+    // energy / sleep / mood (high = good)
+    poor: 1, ok: 3, good: 5,
+    low: 1, neutral: 3, high: 5,
+    // soreness / cramps (high = bad — convention matches ReadinessCheck.jsx)
+    none: 1, mild: 3,
+    // numeric strings
+    "1": 1, "2": 2, "3": 3, "4": 4, "5": 5,
+  };
+  const SORENESS_KEYS = new Set(["soreness", "cramps"]);
+  function normalizeReadiness(r) {
+    if (!r) return READINESS_DEFAULTS;
+    const out = { ...READINESS_DEFAULTS };
+    for (const key of Object.keys(READINESS_DEFAULTS)) {
+      const v = r[key];
+      if (typeof v === "number") { out[key] = v; continue; }
+      if (typeof v === "string") {
+        const mapped = STRING_TO_INT[v.toLowerCase()];
+        if (mapped != null) {
+          // For soreness/cramps, "high" string meant the worst (=5). The map above
+          // already encodes high=5, so the value is correct under our high-is-bad convention.
+          out[key] = mapped;
+        }
+      }
+    }
+    // Safety: clamp to [1,5]
+    for (const k of Object.keys(out)) out[k] = Math.max(1, Math.min(5, out[k]));
+    return out;
+  }
+
   // Local readiness state for immediate slider response, synced to global
-  const [localReadiness, setLocalReadiness] = useState(readiness || {
-    energy: 3,
-    mood: 3,
-    cramps: 1,
-    sleep: 3,
-    soreness: 1
-  });
+  const [localReadiness, setLocalReadiness] = useState(() => normalizeReadiness(readiness));
 
   // Sync global readiness to local if changed elsewhere
   useEffect(() => {
     if (readiness) {
+      const normalized = normalizeReadiness(readiness);
       setLocalReadiness(prev => {
-        // Only update if actually different to avoid loops
-        if (JSON.stringify(prev) !== JSON.stringify(readiness)) return readiness;
+        // Only update if actually different to avoid render loops
+        if (JSON.stringify(prev) !== JSON.stringify(normalized)) return normalized;
         return prev;
       });
     }
