@@ -78,6 +78,16 @@ export async function init() {
 
 export const isHydrated = () => hydrated;
 
+/**
+ * Snapshot every yr_* key in the cache as a plain object, suitable for
+ * JSON export ("Export data" in Settings).
+ */
+export const exportAll = () => {
+  const out = {};
+  for (const [k, v] of cache.entries()) out[k] = v;
+  return out;
+};
+
 export const get = (key, fallback = null) => {
   const k = P + key;
   return cache.has(k) ? cache.get(k) : fallback;

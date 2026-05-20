@@ -1,5 +1,8 @@
 import { useState } from "react";
 import * as Storage from "../storage";
+import { Filesystem, Directory, Encoding } from "@capacitor/filesystem";
+import { Share } from "@capacitor/share";
+import { Capacitor } from "@capacitor/core";
 
 const GOALS      = ["fat loss","muscle tone","endurance","strength","flexibility","wellness"];
 const EQUIPMENT  = ["bodyweight","dumbbells","barbell","bands","kettlebell","machines","cable","cardio"];
@@ -12,7 +15,7 @@ const ACTIVITIES = [
   { id:"very_active", label:"Very Active", sub:"2× daily / hard labour" },
 ];
 
-export default function SettingsPage({ profile, onSave }) {
+export default function SettingsPage({ profile, onSave, onClearAll }) {
   // Existing fields
   const [name,      setName]      = useState(profile.name || "");
   const [goal,      setGoal]      = useState(profile.goal || "fat_loss");
@@ -70,25 +73,47 @@ export default function SettingsPage({ profile, onSave }) {
     setTimeout(() => setSaved(false), 2000);
   };
 
-  const handleExport = () => {
-    const data = {};
-    for (let i = 0; i < localStorage.length; i++) {
-      const key = localStorage.key(i);
-      if (key?.startsWith("yr_")) { try { data[key] = JSON.parse(localStorage.getItem(key)); } catch { data[key] = localStorage.getItem(key); } }
+  const handleExport = async () => {
+    const data = Storage.exportAll();
+    const json = JSON.stringify(data, null, 2);
+    const fileName = `yourreset-data-${new Date().toISOString().slice(0, 10)}.json`;
+
+    // Native (iOS/Android): write to Cache directory then open share sheet
+    if (Capacitor.isNativePlatform()) {
+      try {
+        const written = await Filesystem.writeFile({
+          path: fileName,
+          data: json,
+          directory: Directory.Cache,
+          encoding: Encoding.UTF8,
+        });
+        await Share.share({
+          title: "YourReset data export",
+          url: written.uri,
+          dialogTitle: "Export YourReset data",
+        });
+        return;
+      } catch (err) {
+        console.warn("[settings] native export failed, falling back:", err);
+        // fall through to web download
+      }
     }
-    const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+
+    // Web fallback (Vite dev, browser preview)
+    const blob = new Blob([json], { type: "application/json" });
     const url  = URL.createObjectURL(blob);
     const a    = document.createElement("a");
-    a.href = url; a.download = `yourreset-data-${new Date().toISOString().slice(0, 10)}.json`;
+    a.href = url; a.download = fileName;
     a.click(); URL.revokeObjectURL(url);
   };
 
-  const handleClearAll = () => {
+  const handleClearAll = async () => {
     if (!clearConfirm) { setClearConfirm(true); return; }
-    const keys = [];
-    for (let i = 0; i < localStorage.length; i++) { const k = localStorage.key(i); if (k?.startsWith("yr_")) keys.push(k); }
-    keys.forEach(k => localStorage.removeItem(k));
-    window.location.reload();
+    await Storage.clearAll();
+    // Tell App.jsx to reset React state and route back to onboarding.
+    // No window.location.reload() — that flashes white in WKWebView and
+    // breaks the native shell transition.
+    if (onClearAll) onClearAll();
   };
 
   const row  = { borderTop: "1px solid var(--yr-border)", paddingTop: 18, paddingBottom: 8 };

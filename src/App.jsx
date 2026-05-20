@@ -273,7 +273,22 @@ export default function App() {
         <FriendsTab mySteps={liveData.steps} myName={profile?.name || "You"} />
       )}
       {tab === "you" && (
-        <SettingsPage profile={profile} onSave={(p) => { Storage.set("profile", p); setProfile(p); }} />
+        <SettingsPage
+          profile={profile}
+          onSave={(p) => { Storage.set("profile", p); setProfile(p); }}
+          onClearAll={() => {
+            // Storage.clearAll() has already wiped Preferences; here we
+            // reset React state so the app routes back to onboarding
+            // without a window.location.reload() that would flash the
+            // WKWebView white on iOS.
+            setProfile(null);
+            setDone({});
+            setSwapped({});
+            setReadiness(null);
+            setShowReadiness(false);
+            setTab("today");
+          }}
+        />
       )}
     </>
   )}
