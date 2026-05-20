@@ -188,20 +188,42 @@ function getType(ex, phaseIntensity) {
   return "Strength";
 }
 
+// ── Common mistake by muscle group / category ─────────────────────────────
+function getCommonMistake(ex) {
+  const n = ex.name.toLowerCase();
+  const m = ex.primaryMuscles.join(" ").toLowerCase();
+  const c = ex.category.toLowerCase();
+  if (n.includes("squat") || n.includes("lunge"))  return "Letting knees cave inward — drive them out over your toes.";
+  if (n.includes("deadlift") || n.includes("rdl")) return "Rounding the lower back — hinge at hips and keep a neutral spine.";
+  if (n.includes("press") && m.includes("chest"))  return "Flaring elbows out — tuck them ~45° to protect the shoulder joint.";
+  if (n.includes("row") || n.includes("pulldown")) return "Shrugging the traps — depress and retract your scapulae first.";
+  if (n.includes("curl"))                           return "Swinging at the hips — keep elbows pinned to your sides.";
+  if (n.includes("overhead") || n.includes("shoulder press")) return "Arching the lower back — brace your core and tuck your ribs.";
+  if (n.includes("hip thrust") || n.includes("glute bridge")) return "Overextending at the top — stop when hips are level, not hyperextended.";
+  if (n.includes("plank") || n.includes("core"))   return "Letting the hips sag or pike — keep your body in one straight line.";
+  if (c.includes("cardio") || c.includes("plyo"))  return "Landing with locked knees — absorb impact by landing soft and bending.";
+  if (c.includes("stretch"))                        return "Forcing the stretch — ease into it and hold without bouncing.";
+  if (m.includes("glute") || m.includes("hamstring")) return "Using momentum instead of squeezing the target muscle through the range.";
+  return "Rushing through reps — slow the eccentric (lowering) phase for max stimulus.";
+}
+
 // ── Convert DB exercise to our schema ────────────────────────────────────
 function toSchema(ex, phaseOrGoal, phaseIntensity) {
   const cat  = ex.category.toLowerCase();
   const sr   = generateSetsReps(phaseOrGoal, cat);
+  const rawInstructions = ex.instructions || [];
   return {
-    id:     ex.id,
-    name:   ex.name,
-    sets:   sr.sets,
-    reps:   sr.reps,
-    kcal:   estimateKcal(ex),
-    muscle: ex.primaryMuscles.slice(0, 2).join(", "),
-    type:   getType(ex, phaseIntensity),
-    anim:   getAnimKey(ex),
-    tip:    (ex.instructions?.[0] || "Focus on controlled form throughout the movement.").slice(0, 160),
+    id:        ex.id,
+    name:      ex.name,
+    sets:      sr.sets,
+    reps:      sr.reps,
+    kcal:      estimateKcal(ex),
+    muscle:    ex.primaryMuscles.slice(0, 2).join(", "),
+    type:      getType(ex, phaseIntensity),
+    anim:      getAnimKey(ex),
+    tip:       (rawInstructions[0] || "Focus on controlled form throughout the movement.").slice(0, 160),
+    formCues:  rawInstructions.slice(0, 3).map(s => s.trim()).filter(Boolean),
+    commonMistake: getCommonMistake(ex),
   };
 }
 
@@ -223,6 +245,7 @@ function toSchema(ex, phaseOrGoal, phaseIntensity) {
 export function buildDayExercises({
   phase, goal, equipment, muscles, dayCategory,
   count = 5, level = null, seed = 0, excludeIds = null,
+  swapCounts = {},
 }) {
   const db = getExerciseDBSync();
   if (!db || db.length === 0) return [];
@@ -240,6 +263,8 @@ export function buildDayExercises({
   let candidates = db.filter(ex => {
     // Exclude exercises already used on adjacent days
     if (excludeIds && excludeIds.has(ex.id)) return false;
+    // Exclude exercises user consistently swaps (3+ times)
+    if (swapCounts[ex.id] >= 3) return false;
     // Equipment
     if (!allowedEquip.has(ex.equipment)) return false;
     // Category match

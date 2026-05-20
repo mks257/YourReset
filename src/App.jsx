@@ -12,6 +12,7 @@ import GutResetTab from "./components/GutResetTab";
 import SettingsPage from "./components/SettingsPage";
 import ExerciseModal from "./components/ExerciseModal";
 import BackgroundAtmosphere from "./components/BackgroundAtmosphere";
+import FriendsTab from "./components/FriendsTab";
 import { useTweaks } from "./components/MotionHooks";
 
 const TWEAK_DEFAULTS = {
@@ -23,13 +24,13 @@ const TWEAK_DEFAULTS = {
 };
 
 const PHASE_ACCENT_MAP = {
-  menstrual:  "var(--phase-menstrual)",
-  follicular: "var(--phase-follicular)",
-  ovulatory:  "var(--phase-ovulatory)",
-  luteal:     "var(--phase-luteal)",
-  luteal_early:"var(--phase-luteal)",
-  luteal_late: "var(--phase-luteal)",
-  other:      "var(--phase-other)",
+  menstrual:    "#d98aa8",
+  follicular:   "#9bd8b4",
+  ovulatory:    "#f2bd73",
+  luteal:       "#b79cff",
+  luteal_early: "#b79cff",
+  luteal_late:  "#b79cff",
+  other:        "#8cc8ff",
 };
 
 const TABS = [
@@ -38,6 +39,7 @@ const TABS = [
   { id:"cycle",    letter:"C", label:"Cycle" },
   { id:"fuel",     letter:"F", label:"Fuel" },
   { id:"gut",      letter:"G", label:"Gut" },
+  { id:"friends",  letter:"Fd", label:"Friends" },
   { id:"you",      letter:"Y", label:"You" },
 ];
 
@@ -143,7 +145,7 @@ export default function App() {
     r.setAttribute("data-direction", tweaks.direction);
     r.setAttribute("data-density",   tweaks.density);
     r.setAttribute("data-motion",    tweaks.motion || "full");
-    const phaseKey = cycleState?.phase || tweaks.phase;
+    const phaseKey = tweaks.phase || cycleState?.phase || "follicular";
     const accent = PHASE_ACCENT_MAP[phaseKey] || PHASE_ACCENT_MAP.follicular;
     r.style.setProperty("--phase-accent", accent);
     r.style.setProperty("--phase-soft", `color-mix(in oklch, ${accent} 14%, transparent)`);
@@ -175,7 +177,11 @@ export default function App() {
   const onSwap = (exId, explicitSwap) => {
     const hasBands = (profile?.equipment || []).includes("bands");
     const swap = explicitSwap || (hasBands && SWAP_LIBRARY_BANDS?.[exId]) || SWAP_LIBRARY[exId];
-    if (swap) setSwapped(p => ({ ...p, [`${new Date().getDay()}-${exId}`]: swap }));
+    if (swap) {
+      setSwapped(p => ({ ...p, [`${new Date().getDay()}-${exId}`]: swap }));
+      Storage.pushHistory({ id: exId, type: "swap", name: swap.name, originalId: exId });
+      Storage.recordSubstitution(exId);
+    }
   };
   const onUndoSwap = (exId) => setSwapped(p => { const n = {...p}; delete n[`${new Date().getDay()}-${exId}`]; return n; });
   const onUpdateProfile = (updates) => {
@@ -240,6 +246,7 @@ export default function App() {
           onUndoSwap={onUndoSwap}
           dbReady={dbReady}
           motion={tweaks.motion}
+          onGoToFuel={() => setTab("fuel")}
         />
       )}
       {tab === "progress" && (
@@ -249,16 +256,21 @@ export default function App() {
         <CycleTab
           cycleState={cycleState}
           profile={profile}
+          readiness={readiness}
+          setReadiness={setReadiness}
           onResetProfile={() => { Storage.set("profile", null); setProfile(null); }}
           onUpdateProfile={onUpdateProfile}
           motion={tweaks.motion}
         />
       )}
       {tab === "fuel" && (
-        <NutritionTab cycleState={cycleState} profile={profile} motion={tweaks.motion} />
+        <NutritionTab cycleState={cycleState} profile={profile} motion={tweaks.motion} onProfileUpdate={onUpdateProfile} />
       )}
       {tab === "gut" && (
         <GutResetTab profile={profile} cycleState={cycleState} motion={tweaks.motion} />
+      )}
+      {tab === "friends" && (
+        <FriendsTab mySteps={liveData.steps} myName={profile?.name || "You"} />
       )}
       {tab === "you" && (
         <SettingsPage profile={profile} onSave={(p) => { Storage.set("profile", p); setProfile(p); }} />
@@ -286,7 +298,14 @@ export default function App() {
         const doneKey = modal._doneKey || `${new Date().getDay()}-${modal.id}`;
         return (
           <ExerciseModal ex={modal} dayColor="var(--phase-accent)" onClose={() => setModal(null)}
-            isDone={!!done[doneKey]} onToggleDone={() => setDone(p => ({ ...p, [doneKey]: !p[doneKey] }))}
+            isDone={!!done[doneKey]} 
+            onToggleDone={() => {
+              const newState = !done[doneKey];
+              setDone(p => ({ ...p, [doneKey]: newState }));
+              if (newState) {
+                Storage.pushHistory({ id: modal.id, name: modal.name, type: "completion", kcal: modal.kcal });
+              }
+            }}
             selectedDay={new Date().getDay()} weekKey={weekKey} phaseNote={phaseNote}
             gender={profile?.gender || "female"} />
         );

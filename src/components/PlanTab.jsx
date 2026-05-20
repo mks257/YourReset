@@ -1,10 +1,12 @@
 import { useMemo, useState } from "react";
+import FoodCapsuleCard from "./FoodCapsuleCard";
 import ExerciseAnimation from "./ExerciseAnimation";
 import ReadinessCheck from "./ReadinessCheck";
 import { WEEK_PLAN, EQUIPMENT_MAP, SUBSTITUTIONS, SWAP_LIBRARY, DAY_TEMPLATES } from "../workoutData";
 import { buildDayExercises, findAlternatives } from "../exerciseLibrary";
-import { PHASE_EMOJI } from "../cycleEngine";
+import { PHASE_EMOJI, getReadinessScore, getAdjustedIntensity, buildReadinessNote, adaptVolume, parseSets } from "../cycleEngine";
 import { useCountUp } from "./MotionHooks";
+import * as Storage from "../storage";
 
 function pickAvatar(exercises) {
   return exercises.find(e => e.type === "Strength") || exercises.find(e => e.type === "Fat Burn") || exercises[0];
@@ -22,7 +24,7 @@ export default function PlanTab({
   day, selectedDay, setSelectedDay, done, setDone, setModal,
   readiness, showReadiness, setReadiness, setShowReadiness,
   cycleState, profile, weekKey, swapped = {}, onSwap, onUndoSwap,
-  dbReady = false, motion = "full",
+  dbReady = false, motion = "full", onGoToFuel,
 }) {
   const animOn = motion !== "off";
   const [subbing, setSubbing] = useState(null);
@@ -37,6 +39,8 @@ export default function PlanTab({
     if (!dbReady) return null;
     const result = {};
     const usedIds = new Set();
+    const swapCounts = Storage.get("swap_counts", {});
+
     DAY_TEMPLATES.forEach((template, idx) => {
       const gen = buildDayExercises({
         phase: cycleState?.phase || null,
@@ -47,6 +51,7 @@ export default function PlanTab({
         count: template.count || 5,
         seed: idx * 100 + weekNum * 1000,
         excludeIds: new Set(usedIds),
+        swapCounts,
       });
       gen.forEach(e => usedIds.add(e.id));
       result[idx] = gen.length >= 3 ? gen : null;
@@ -62,6 +67,12 @@ export default function PlanTab({
   const pct       = Math.round((doneCount / totalEx) * 100);
   const pctAnim   = useCountUp(pct, { duration:700, enabled: animOn });
   const estMin    = Math.round(totalEx * 4.5);
+
+  const readinessScore = getReadinessScore(readiness);
+  const originalIntensity = cycleState?.intensity || "moderate";
+  const adjustedIntensity = getAdjustedIntensity(originalIntensity, readinessScore);
+  const isAdapted = readiness && adjustedIntensity !== originalIntensity;
+  const adaptationNote = readiness ? buildReadinessNote(originalIntensity, adjustedIntensity, readinessScore) : null;
 
   const spokes = [
     { key:"readiness", label:"Readiness",    value: readiness ? `${readiness.energy} / 5` : "—",           angle:-70 },
@@ -93,12 +104,19 @@ export default function PlanTab({
             </div>
             <h1 className="yr-hub-title">{day.label}</h1>
             <div className="yr-hub-meta">{doneCount}/{totalEx} done · {pctAnim}% complete</div>
-            {readiness && cycleState && (
+            {readiness && (
+              <div style={{ fontSize:10, color:"var(--phase-accent)", fontFamily:"var(--font-mono)", marginBottom:8, textAlign:"center", padding:"0 20px" }}>
+                {adaptationNote}
+              </div>
+            )}
+            {!readiness && cycleState && (
               <div style={{ fontSize:10, color:"var(--phase-accent)", fontFamily:"var(--font-mono)", marginBottom:8, textAlign:"center" }}>
                 {PHASE_EMOJI[cycleState.phase]} {cycleState.label}
               </div>
             )}
-            <button className="yr-hub-cta" onClick={() => {}}>Begin session</button>
+            <button className="yr-hub-cta" onClick={() => {
+              document.querySelector('.yr-journey')?.scrollIntoView({ behavior: 'smooth' });
+            }}>Begin session</button>
           </div>
 
           {spokes.map((s, i) => {
@@ -130,6 +148,11 @@ export default function PlanTab({
         </div>
       )}
 
+      {/* Food Capsule */}
+      <div style={{ maxWidth: 600, margin: "0 auto 8px", padding: "0 4px" }}>
+        <FoodCapsuleCard onTap={onGoToFuel} />
+      </div>
+
       {/* Journey track */}
       <div className="yr-journey">
         <div className="yr-journey-header">
@@ -137,6 +160,12 @@ export default function PlanTab({
           <span className="yr-journey-meta">
             {totalEx} stations · ~{estMin} min
             {dynamicExercises && <span style={{ color:"var(--phase-accent)", marginLeft:8, fontSize:10, fontWeight:700 }}>✦ personalised</span>}
+            {(() => {
+               const sc = Storage.get("swap_counts", {});
+               const excludedCount = Object.values(sc).filter(v => v >= 3).length;
+               if (excludedCount > 0) return <span style={{ color:"var(--yr-muted)", marginLeft:8, fontSize:10 }}>· {excludedCount} excluded by history</span>;
+               return null;
+            })()}
           </span>
         </div>
 
@@ -153,17 +182,26 @@ export default function PlanTab({
             const hasMissing = !isSwapped && missing.length > 0;
 
             return (
-              <button key={ex.id}
+              <div key={ex.id}
                 className={`yr-step${isDone ? " done" : ""}${animOn ? " yr-stagger" : ""}`}
-                style={{ "--i": i+2 }}
+                style={{ "--i": i+2, cursor: "pointer" }}
                 onClick={() => setModal({ ...display, _doneKey: key })}>
                 <div className="yr-step-num">
                   Station {String(i+1).padStart(2,"0")}
                   {isDone && <span style={{ display:"inline-block", marginLeft:6, color:"var(--phase-accent)" }}>· logged</span>}
                   {isSwapped && <span style={{ display:"inline-block", marginLeft:6, color:"var(--phase-accent)" }}>· swapped</span>}
                 </div>
-                <div className="yr-step-title">{display.name}</div>
-                <div className="yr-step-meta">{display.sets} · {display.muscle}</div>
+                <div style={{ display:"flex", alignItems:"center", gap:6 }}>
+                  <div className="yr-step-title">{display.name}</div>
+                  {isAdapted && <span style={{ fontSize:8, background:"var(--phase-soft)", color:"var(--phase-accent)", padding:"1px 4px", borderRadius:4, fontWeight:700 }}>ADAPTED</span>}
+                </div>
+                <div className="yr-step-meta">
+                  {(() => {
+                    const baseSets = parseSets(display.sets) || 3;
+                    const adapted = adaptVolume(baseSets, adjustedIntensity, readiness);
+                    return `${adapted} sets`;
+                  })()} · {display.reps} · {display.muscle}
+                </div>
                 <div>
                   <span className="yr-step-tag">{display.type}</span>
                   <span className="yr-step-tag">{display.kcal} kcal</span>
@@ -193,7 +231,7 @@ export default function PlanTab({
                     setSubbing({ slotId:key, originalEx:ex, alternatives:alts });
                   }}>⟳ alternatives</button>
                 )}
-              </button>
+              </div>
             );
           })}
         </div>

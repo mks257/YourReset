@@ -1,294 +1,251 @@
-import { useState, useEffect, useRef, useCallback, lazy, Suspense } from "react";
-import { createVideoGeneration, pollGeneration, extractVideoUrl } from "../higgsfieldApi";
+import { useState } from "react";
 import WorkoutLogger from "./WorkoutLogger";
-import ExerciseAnimation from "./ExerciseAnimation";
+import TrendAnalysis from "./TrendAnalysis";
 import { T } from "../theme";
 import * as Storage from "../storage";
 
-// 3D preview — only loaded when user explicitly taps "View 3D"
-// Keeps the 880KB Three.js chunk off the primary modal path.
-const Exercise3DPreview = lazy(() => import("./Exercise3DPreview"));
+function ExerciseModal({ ex, dayColor, onClose, onToggleDone, isDone, selectedDay, weekKey, phaseNote }) {
+  const [ytLoaded, setYtLoaded] = useState(false);
 
-function Preview3DSpinner({ color, height }) {
+  const ytQuery = encodeURIComponent(`${ex.name} ${ex.muscle} proper form`);
+  const ytSearchUrl = `https://www.youtube.com/results?search_query=${ytQuery}`;
+
+  const formCues = ex.formCues?.length ? ex.formCues : [ex.tip].filter(Boolean);
+
   return (
-    <div style={{ width:"100%", height, display:"flex", alignItems:"center", justifyContent:"center", background:`${color}08`, borderRadius:16 }}>
-      <div style={{ width:28, height:28, borderRadius:"50%", border:`2px solid ${color}33`, borderTopColor:color, animation:"avatar-spin 0.7s linear infinite" }} />
-      <style>{`@keyframes avatar-spin { to { transform: rotate(360deg); } }`}</style>
-    </div>
+    <>
+      <style>{`
+        @keyframes modal-slide-up {
+          from { opacity: 0; transform: translateY(24px) scale(0.98); }
+          to   { opacity: 1; transform: translateY(0) scale(1); }
+        }
+        .em-scroll::-webkit-scrollbar { width: 0; }
+      `}</style>
+
+      <div
+        onClick={onClose}
+        style={{
+          position: "fixed", inset: 0, zIndex: 1000,
+          background: "rgba(4,4,14,0.92)",
+          backdropFilter: "blur(16px)",
+          display: "flex", alignItems: "flex-end", justifyContent: "center",
+        }}
+      >
+        <div
+          onClick={e => e.stopPropagation()}
+          className="em-scroll"
+          style={{
+            width: "100%", maxWidth: 480,
+            maxHeight: "94vh", overflowY: "auto",
+            background: T.card,
+            borderRadius: "28px 28px 0 0",
+            animation: "modal-slide-up 0.3s cubic-bezier(0.22,1,0.36,1) both",
+            boxShadow: `0 -8px 80px ${dayColor}18, 0 -2px 0 ${dayColor}33`,
+          }}
+        >
+          {/* Drag handle */}
+          <div style={{
+            width: 40, height: 4, borderRadius: 2,
+            background: "rgba(255,255,255,0.12)",
+            margin: "12px auto 0",
+          }} />
+
+          <div style={{ padding: "24px 22px 100px" }}>
+
+            {/* Name + tags */}
+            <div style={{ marginBottom: 20 }}>
+              <h2 style={{
+                fontFamily: "'Fraunces', Georgia, serif",
+                fontStyle: "italic", fontWeight: 800,
+                fontSize: "1.75rem", color: T.text,
+                margin: "0 0 12px", lineHeight: 1.1,
+                letterSpacing: "-0.01em",
+              }}>{ex.name}</h2>
+              <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+                <Tag color={dayColor} bg={`${dayColor}1a`}>{ex.muscle}</Tag>
+                <Tag color={T.muted} bg="rgba(255,255,255,0.06)">{ex.type}</Tag>
+                <Tag color={T.amber} bg="rgba(255,179,71,0.12)">🔥 ~{ex.kcal} kcal</Tag>
+              </div>
+            </div>
+
+            {/* Stat cards */}
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 18 }}>
+              {[["SETS", ex.sets], ["REPS", ex.reps]].map(([label, val]) => (
+                <div key={label} style={{
+                  background: T.card2, border: "1px solid rgba(255,255,255,0.05)",
+                  borderRadius: 16, padding: "14px 18px",
+                }}>
+                  <div style={{ fontSize: "0.6rem", color: T.muted, textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 6 }}>{label}</div>
+                  <div style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 900, fontSize: "1.5rem", color: dayColor, lineHeight: 1 }}>{val}</div>
+                </div>
+              ))}
+            </div>
+
+            {/* Phase note */}
+            {phaseNote && (
+              <div style={{
+                display: "flex", alignItems: "flex-start", gap: 10,
+                background: "rgba(94,234,212,0.06)", border: "1px solid rgba(94,234,212,0.18)",
+                borderRadius: 14, padding: "11px 14px", marginBottom: 16,
+              }}>
+                <span style={{ fontSize: "1rem", lineHeight: 1 }}>🌿</span>
+                <span style={{ fontSize: "0.75rem", color: T.green, lineHeight: 1.55 }}>{phaseNote}</span>
+              </div>
+            )}
+
+            {/* Form cues */}
+            <div style={{ marginBottom: 18, borderRadius: 16, overflow: "hidden", border: `1px solid ${dayColor}1e` }}>
+              <div style={{
+                display: "flex", alignItems: "center", gap: 8,
+                padding: "12px 15px", background: `${dayColor}0c`,
+                borderBottom: `1px solid ${dayColor}14`,
+              }}>
+                <span style={{ fontSize: "0.95rem" }}>📋</span>
+                <span style={{ fontSize: "0.65rem", color: dayColor, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.1em" }}>Form Cues</span>
+              </div>
+
+              <div style={{ padding: "12px 15px", background: `${dayColor}06` }}>
+                {formCues.map((cue, i) => (
+                  <div key={i} style={{
+                    display: "flex", alignItems: "flex-start", gap: 10,
+                    marginBottom: i < formCues.length - 1 ? 10 : 0,
+                  }}>
+                    <div style={{
+                      width: 20, height: 20, borderRadius: 6, flexShrink: 0,
+                      background: `${dayColor}22`,
+                      display: "flex", alignItems: "center", justifyContent: "center",
+                      fontSize: "0.6rem", fontWeight: 800, color: dayColor, marginTop: 1,
+                    }}>{i + 1}</div>
+                    <span style={{ fontSize: "0.82rem", lineHeight: 1.6, color: "rgba(240,238,255,0.85)" }}>{cue}</span>
+                  </div>
+                ))}
+              </div>
+
+              {ex.commonMistake && (
+                <div style={{
+                  display: "flex", alignItems: "flex-start", gap: 10,
+                  padding: "11px 15px",
+                  borderTop: `1px solid ${dayColor}14`,
+                  background: "rgba(252,129,129,0.05)",
+                }}>
+                  <span style={{ fontSize: "0.88rem", flexShrink: 0 }}>⚠️</span>
+                  <div>
+                    <div style={{ fontSize: "0.58rem", color: "#fc8181", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 3 }}>Common mistake</div>
+                    <div style={{ fontSize: "0.8rem", lineHeight: 1.55, color: "rgba(240,238,255,0.75)" }}>{ex.commonMistake}</div>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Substitution note */}
+            {Storage.getSubstitutionCount(ex.id) > 0 && (
+              <div style={{
+                background: "rgba(242,189,115,0.07)", border: "1px solid rgba(242,189,115,0.18)",
+                borderRadius: 12, padding: "9px 13px", marginBottom: 14,
+                fontSize: "0.73rem", color: "#f2bd73",
+              }}>
+                ⟳ You've swapped this exercise {Storage.getSubstitutionCount(ex.id)}× previously.
+              </div>
+            )}
+
+            <TrendAnalysis exerciseId={ex.id} exerciseName={ex.name} dayColor={dayColor} />
+
+            <WorkoutLogger ex={ex} selectedDay={selectedDay} weekKey={weekKey} dayColor={dayColor} />
+
+            {/* YouTube */}
+            <div style={{ borderRadius: 16, overflow: "hidden", border: "1px solid rgba(255,255,255,0.07)" }}>
+              {!ytLoaded ? (
+                <button
+                  onClick={() => setYtLoaded(true)}
+                  style={{
+                    width: "100%", display: "flex", alignItems: "center", gap: 12,
+                    padding: "14px 16px", background: T.card2,
+                    border: "none", cursor: "pointer", textAlign: "left",
+                  }}
+                >
+                  <div style={{
+                    width: 36, height: 36, borderRadius: 10, flexShrink: 0,
+                    background: "rgba(255,0,0,0.15)",
+                    display: "flex", alignItems: "center", justifyContent: "center",
+                    fontSize: "1rem", color: "#ff6b6b",
+                  }}>▶</div>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontFamily: "'Outfit',sans-serif", fontWeight: 700, fontSize: "0.85rem", color: T.text }}>
+                      Watch on YouTube
+                    </div>
+                    <div style={{ fontSize: "0.62rem", color: T.muted, marginTop: 2 }}>
+                      "{ex.name} proper form" · tap to search
+                    </div>
+                  </div>
+                  <span style={{ fontSize: "0.7rem", color: T.muted }}>↗</span>
+                </button>
+              ) : (
+                <div style={{ background: T.card2, padding: "12px 16px 14px" }}>
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
+                    <div style={{ fontSize: "0.7rem", color: T.muted }}>Opens in YouTube</div>
+                    <button onClick={() => setYtLoaded(false)} style={{ background: "none", border: "none", color: T.muted, cursor: "pointer", fontSize: "0.8rem" }}>✕</button>
+                  </div>
+                  <a
+                    href={ytSearchUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    style={{
+                      display: "block", padding: "10px 0", borderRadius: 10,
+                      textAlign: "center",
+                      background: "rgba(255,0,0,0.15)",
+                      color: "#ff6b6b", fontFamily: "'Outfit',sans-serif",
+                      fontWeight: 700, fontSize: "0.82rem",
+                      textDecoration: "none",
+                      border: "1px solid rgba(255,0,0,0.2)",
+                    }}
+                  >
+                    ▶ Open YouTube search
+                  </a>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Sticky footer */}
+          <div style={{
+            position: "sticky", bottom: 0,
+            padding: "12px 22px 28px",
+            background: `linear-gradient(to bottom, transparent, ${T.card} 30%)`,
+            display: "flex", gap: 10,
+          }}>
+            <button onClick={onClose} style={{
+              width: 48, height: 48, borderRadius: 14,
+              border: "1px solid rgba(255,255,255,0.09)",
+              background: "rgba(255,255,255,0.04)", color: T.muted,
+              fontSize: "1rem", cursor: "pointer", flexShrink: 0,
+              display: "flex", alignItems: "center", justifyContent: "center",
+            }}>✕</button>
+
+            <button onClick={onToggleDone} style={{
+              flex: 1, height: 48, borderRadius: 14,
+              border: "none", cursor: "pointer",
+              background: isDone ? "rgba(94,234,212,0.13)" : `linear-gradient(135deg, ${dayColor}, ${dayColor}bb)`,
+              color: isDone ? T.green : "#fff",
+              fontFamily: "'Outfit',sans-serif", fontWeight: 800,
+              fontSize: "0.92rem", letterSpacing: "0.01em",
+              transition: "all 0.2s",
+              boxShadow: isDone ? "none" : `0 6px 24px ${dayColor}38`,
+            }}>
+              {isDone ? "✓ Completed — Tap to Undo" : "Mark as Done ✓"}
+            </button>
+          </div>
+        </div>
+      </div>
+    </>
   );
 }
 
-// Cache key per exercise — avoids re-generating on every modal open
-const videoCacheKey = (exId) => `hf_vid_${exId}`;
-
-function ExerciseModal({ ex, dayColor, onClose, onToggleDone, isDone, selectedDay, weekKey, phaseNote, gender = "female" }) {
-  // Check localStorage for a cached URL before going idle
-  const cachedUrl = Storage.get(videoCacheKey(ex.id), null);
-
-  const [vidState,  setVidState]  = useState(cachedUrl ? "ready" : "idle");
-  const [videoUrl,  setVideoUrl]  = useState(cachedUrl);
-  const [statusMsg, setStatusMsg] = useState("");
-  const [show3D,    setShow3D]    = useState(false); // opt-in — keeps Three.js off primary path
-  const pollRef = useRef(null);
-
-  useEffect(() => () => clearInterval(pollRef.current), []);
-
-  const handleGenerate = useCallback(async () => {
-    setVidState("loading");
-    setStatusMsg("Submitting to Higgsfield AI...");
-    try {
-      const data = await createVideoGeneration(ex.name, ex.type);
-      // Official API returns request_id; legacy path also checks generation_id
-      const genId = data.request_id || data.generation_id || data.id;
-      if (!genId) throw new Error("No request ID returned from API.");
-      setStatusMsg("Generating your video…");
-
-      pollRef.current = setInterval(async () => {
-        try {
-          const poll = await pollGeneration(genId);
-          const status = (poll.status || "").toLowerCase();
-
-          if (status === "completed" || status === "succeeded") {
-            clearInterval(pollRef.current);
-            const url = extractVideoUrl(poll);
-            if (!url) { setVidState("error"); setStatusMsg("Video ready but URL missing. Try again."); return; }
-            // Cache the URL in localStorage so this exercise doesn't re-generate
-            Storage.set(videoCacheKey(ex.id), url);
-            setVideoUrl(url);
-            setVidState("ready");
-          } else if (status === "failed" || status === "error" || status === "nsfw") {
-            clearInterval(pollRef.current);
-            setVidState("error");
-            setStatusMsg(poll.error || "Generation failed. Please try again.");
-          } else {
-            setStatusMsg(`${status || "processing"}…`);
-          }
-        } catch {
-          clearInterval(pollRef.current);
-          setVidState("error");
-          setStatusMsg("Lost connection. Please try again.");
-        }
-      }, 5000);
-    } catch (err) {
-      setVidState("error");
-      setStatusMsg(err.message || "Failed to connect to Higgsfield API.");
-    }
-  }, [ex.name]);
-
-  const CSS_SPIN = `
-    @keyframes hf-spin { to { transform: rotate(360deg); } }
-    @keyframes hf-pulse { 0%,100%{opacity:0.5} 50%{opacity:1} }
-    @keyframes hf-shimmer {
-      0%   { background-position: -200% center; }
-      100% { background-position:  200% center; }
-    }
-  `;
-
+function Tag({ color, bg, children }) {
   return (
-    <div onClick={onClose} style={{
-      position:"fixed", inset:0, background:"rgba(0,0,0,0.88)", zIndex:1000,
-      display:"flex", alignItems:"center", justifyContent:"center", padding:16,
-      backdropFilter:"blur(10px)",
-    }}>
-      <style>{CSS_SPIN}</style>
-      <div onClick={e=>e.stopPropagation()} style={{
-        background:T.card, border:`1px solid ${dayColor}44`, borderRadius:28,
-        padding:28, maxWidth:440, width:"100%", position:"relative",
-        boxShadow:`0 0 80px ${dayColor}1a, 0 24px 48px rgba(0,0,0,0.6)`,
-        maxHeight:"90vh", overflowY:"auto",
-      }}>
-        <button onClick={onClose} style={{
-          position:"absolute", top:16, right:16, background:"rgba(255,255,255,0.06)",
-          border:"none", borderRadius:"50%", width:32, height:32, cursor:"pointer",
-          color:T.muted, fontSize:"1rem", display:"flex", alignItems:"center", justifyContent:"center"
-        }}>✕</button>
-
-        {/* Exercise visual — 2D by default, 3D available on tap */}
-        {!show3D ? (
-          <div style={{ display:"flex", justifyContent:"center", marginBottom:16, background:`${dayColor}0a`, borderRadius:16, padding:"12px 0", position:"relative" }}>
-            <ExerciseAnimation type={ex.anim} color={dayColor} />
-            <button
-              onClick={() => setShow3D(true)}
-              title="Load 3D preview"
-              style={{
-                position:"absolute", bottom:8, right:10,
-                padding:"4px 10px", borderRadius:99, fontSize:10, fontWeight:700,
-                border:`1px solid ${dayColor}33`, background:`${dayColor}12`,
-                color:dayColor, cursor:"pointer", opacity:0.75,
-              }}>
-              ▷ 3D
-            </button>
-          </div>
-        ) : (
-          <Suspense fallback={<Preview3DSpinner color={dayColor} height={230} />}>
-            <div style={{ marginBottom:16, borderRadius:16, overflow:"hidden", background:`${dayColor}08`, position:"relative" }}>
-              <Exercise3DPreview type={ex.anim} color={dayColor} height={230} gender={gender} />
-              <button
-                onClick={() => setShow3D(false)}
-                style={{ position:"absolute", bottom:8, right:10, padding:"4px 10px", borderRadius:99, fontSize:10, fontWeight:700, border:`1px solid ${dayColor}33`, background:`${dayColor}12`, color:dayColor, cursor:"pointer" }}>
-                ✕ 3D
-              </button>
-            </div>
-          </Suspense>
-        )}
-
-        <div style={{ fontFamily:"'Outfit',sans-serif", fontSize:"1.15rem", fontWeight:800, marginBottom:6 }}>{ex.name}</div>
-        <div style={{ display:"flex", gap:8, marginBottom:14, flexWrap:"wrap" }}>
-          <span style={{ fontSize:"0.7rem", padding:"3px 10px", borderRadius:100, background:`${dayColor}20`, color:dayColor, fontWeight:700 }}>{ex.muscle}</span>
-          <span style={{ fontSize:"0.7rem", padding:"3px 10px", borderRadius:100, background:"rgba(255,255,255,0.06)", color:T.muted, fontWeight:600 }}>{ex.type}</span>
-          <span style={{ fontSize:"0.7rem", padding:"3px 10px", borderRadius:100, background:"rgba(255,179,71,0.15)", color:T.amber, fontWeight:700 }}>🔥 ~{ex.kcal} kcal</span>
-        </div>
-
-        {phaseNote && (
-          <div style={{ background: `rgba(94,234,212,0.08)`, border: `1px solid rgba(94,234,212,0.2)`, borderRadius: 10, padding: "8px 12px", marginBottom: 12, fontSize: "0.75rem", color: T.green }}>
-            🌿 {phaseNote}
-          </div>
-        )}
-
-        <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:10, marginBottom:16 }}>
-          {[["Sets", ex.sets], ["Reps", ex.reps]].map(([l,v])=>(
-            <div key={l} style={{ background:T.card2, borderRadius:12, padding:"10px 14px" }}>
-              <div style={{ fontSize:"0.65rem", color:T.muted, textTransform:"uppercase", letterSpacing:"0.05em" }}>{l}</div>
-              <div style={{ fontFamily:"'Outfit',sans-serif", fontWeight:800, fontSize:"1rem", color:dayColor, marginTop:2 }}>{v}</div>
-            </div>
-          ))}
-        </div>
-
-        <div style={{ background:`${dayColor}0d`, border:`1px solid ${dayColor}22`, borderRadius:12, padding:"12px 14px", marginBottom:18 }}>
-          <div style={{ fontSize:"0.65rem", color:T.muted, textTransform:"uppercase", letterSpacing:"0.05em", marginBottom:5 }}>💡 Coach Tip</div>
-          <div style={{ fontSize:"0.82rem", lineHeight:1.6, color:"rgba(240,238,255,0.85)" }}>{ex.tip}</div>
-        </div>
-
-        <WorkoutLogger ex={ex} selectedDay={selectedDay} weekKey={weekKey} dayColor={dayColor} />
-
-        {/* Higgsfield AI Video Section */}
-        <div style={{
-          background:"linear-gradient(135deg,rgba(180,139,250,0.06),rgba(56,217,192,0.06))",
-          border:`1px solid rgba(180,139,250,0.2)`,
-          borderRadius:16, padding:"16px", marginBottom:16,
-        }}>
-          <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:12 }}>
-            <div style={{
-              width:28, height:28, borderRadius:8,
-              background:"linear-gradient(135deg,#b48bfa,#38d9c0)",
-              display:"flex", alignItems:"center", justifyContent:"center", fontSize:"0.75rem", flexShrink:0,
-            }}>▶</div>
-            <div style={{ flex:1 }}>
-              <div style={{ fontFamily:"'Outfit',sans-serif", fontWeight:800, fontSize:"0.85rem", color:T.text }}>
-                Motion demo
-              </div>
-              <div style={{ fontSize:"0.62rem", color:T.muted }}>
-                Image-to-video · Higgsfield · ~60s to generate
-              </div>
-            </div>
-            {cachedUrl && vidState === "ready" && (
-              <span style={{
-                fontSize:"0.6rem", fontWeight:700, padding:"3px 8px",
-                borderRadius:99, border:"1px solid rgba(94,234,212,0.3)",
-                background:"rgba(94,234,212,0.1)", color:"#5eead4",
-                whiteSpace:"nowrap",
-              }}>
-                Saved demo
-              </span>
-            )}
-          </div>
-
-          {vidState === "idle" && (
-            <button onClick={handleGenerate} style={{
-              width:"100%", padding:"12px 0", borderRadius:12, border:"none", cursor:"pointer",
-              background:"linear-gradient(135deg,#b48bfa,#38d9c0,#b48bfa)",
-              backgroundSize:"200% auto",
-              animation:"hf-shimmer 3s linear infinite",
-              color:"#fff", fontFamily:"'Outfit',sans-serif", fontWeight:800, fontSize:"0.88rem",
-              boxShadow:"0 4px 20px rgba(180,139,250,0.35)",
-              display:"flex", alignItems:"center", justifyContent:"center", gap:8,
-            }}>
-              Animate exercise demo
-            </button>
-          )}
-
-          {vidState === "loading" && (
-            <div style={{ textAlign:"center", padding:"12px 0" }}>
-              <div style={{
-                width:32, height:32, borderRadius:"50%",
-                border:"3px solid rgba(180,139,250,0.2)",
-                borderTopColor:"#b48bfa",
-                animation:"hf-spin 0.8s linear infinite",
-                margin:"0 auto 10px",
-              }} />
-              <div style={{ fontSize:"0.78rem", color:"#b48bfa", fontWeight:600, animation:"hf-pulse 1.5s ease infinite" }}>
-                {statusMsg}
-              </div>
-              <div style={{ fontSize:"0.62rem", color:T.muted, marginTop:4 }}>
-                Applying motion to exercise frame…
-              </div>
-            </div>
-          )}
-
-          {vidState === "ready" && videoUrl && (
-            <div>
-              <video
-                src={videoUrl}
-                controls autoPlay loop playsInline
-                style={{
-                  width:"100%", borderRadius:12, display:"block",
-                  border:"1px solid rgba(180,139,250,0.3)",
-                  maxHeight:320, objectFit:"cover",
-                }}
-              />
-              <button onClick={() => {
-                // Clear cache so user can re-generate a fresher clip
-                Storage.set(videoCacheKey(ex.id), null);
-                setVidState("idle"); setVideoUrl(null);
-              }} style={{
-                marginTop:8, width:"100%", padding:"8px 0", borderRadius:10,
-                border:"1px solid rgba(255,255,255,0.08)",
-                background:"transparent", color:T.muted, fontSize:"0.7rem",
-                cursor:"pointer", fontFamily:"'Outfit',sans-serif",
-              }}>
-                ↺ Generate new clip
-              </button>
-            </div>
-          )}
-
-          {vidState === "error" && (
-            <div>
-              {/* Fallback: surface form tips prominently instead of just an error */}
-              <div style={{
-                background:"rgba(255,255,255,0.04)", borderRadius:10,
-                padding:"12px 14px", marginBottom:10,
-              }}>
-                <div style={{ fontSize:"0.68rem", color:T.muted, marginBottom:5, textTransform:"uppercase", letterSpacing:"0.05em" }}>
-                  AI demo unavailable · Form tips instead
-                </div>
-                <div style={{ fontSize:"0.82rem", lineHeight:1.6, color:"rgba(240,238,255,0.8)" }}>
-                  {ex.tip}
-                </div>
-              </div>
-              <button onClick={() => setVidState("idle")} style={{
-                width:"100%", padding:"8px 0", borderRadius:10,
-                border:"1px solid rgba(255,255,255,0.1)",
-                background:"transparent", color:T.muted, fontSize:"0.75rem",
-                cursor:"pointer", fontFamily:"'Outfit',sans-serif", fontWeight:600,
-              }}>
-                Try again
-              </button>
-            </div>
-          )}
-        </div>
-
-        <button onClick={onToggleDone} style={{
-          width:"100%", padding:"13px 0", borderRadius:14, border:"none", cursor:"pointer",
-          background: isDone ? "rgba(94,234,212,0.15)" : `linear-gradient(135deg,${dayColor},${dayColor}bb)`,
-          color: isDone ? T.green : "#fff",
-          fontFamily:"'Outfit',sans-serif", fontWeight:800, fontSize:"0.95rem",
-          transition:"all 0.2s",
-          boxShadow: isDone ? "none" : `0 6px 20px ${dayColor}44`,
-        }}>
-          {isDone ? "✓ Completed — Tap to Undo" : "Mark as Done ✓"}
-        </button>
-      </div>
-    </div>
+    <span style={{
+      fontSize: "0.68rem", padding: "4px 11px", borderRadius: 99,
+      background: bg, color, fontWeight: 700, letterSpacing: "0.02em",
+    }}>{children}</span>
   );
 }
 

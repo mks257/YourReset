@@ -1,10 +1,12 @@
 import { useCountUp } from "./MotionHooks";
+import * as Storage from "../storage";
 
 const STEP_HISTORY = [3.2,4.1,5.5,6.8,3.9,7.2,8.1,4.5,5.6,3.8,4.4,7.5,2.9,4.1,5.8,3.3,5.0,7.1,8.5,4.2,5.0,6.1,3.7,4.8,5.5,7.9,3.4,4.7,5.3,4.0,9.2,5.9];
 
 export default function MetricsTab({ liveData, motion = "full" }) {
   const animOn = motion !== "off";
   const today = new Date().toLocaleDateString("en-US", { weekday:"short", month:"short", day:"numeric" });
+  const history = Storage.get("history", []);
 
   const stepsAnim  = useCountUp(liveData?.steps || 0,  { duration:1100, enabled:animOn });
   const kcalAnim   = useCountUp(liveData?.kcal  || 0,  { duration:900,  delay:60, enabled:animOn });
@@ -51,6 +53,46 @@ export default function MetricsTab({ liveData, motion = "full" }) {
             </div>
           </div>
         ))}
+      </div>
+
+      {/* Activity History */}
+      <div className={animOn ? "yr-stagger" : ""} style={{"--i":7}}>
+        <div className="yr-overline">Activity Journal</div>
+        <div style={{ marginTop:16, borderTop:"1px solid var(--yr-border)", display:"flex", flexDirection:"column" }}>
+          {history.length === 0 ? (
+            <div style={{ padding:"24px 0", color:"var(--yr-muted)", fontSize:13 }}>No entries for this period. Session completions will appear here.</div>
+          ) : (
+            history.map((h, idx) => (
+              <div key={idx} style={{ 
+                display:"flex", alignItems:"center", justifyContent:"space-between", 
+                padding:"14px 0", borderBottom:"1px solid var(--yr-border)",
+                gap: 16
+              }}>
+                <div style={{ display:"flex", alignItems:"center", gap:12 }}>
+                  <div style={{ 
+                    width:32, height:32, borderRadius:"50%", 
+                    background: h.type === "swap" ? "var(--yr-surface-2)" : "var(--phase-soft)",
+                    display:"flex", alignItems:"center", justifyContent:"center", fontSize:14
+                  }}>
+                    {h.type === "swap" ? "⟳" : "✓"}
+                  </div>
+                  <div>
+                    <div style={{ fontSize:14, fontWeight:500 }}>{h.name}</div>
+                    <div style={{ fontSize:11, color:"var(--yr-muted)", fontFamily:"var(--font-mono)" }}>
+                      {h.type === "swap" ? "Substituted exercise" : "Completed station"}
+                    </div>
+                  </div>
+                </div>
+                <div style={{ textAlign:"right" }}>
+                  <div style={{ fontSize:12, fontWeight:500 }}>{h.kcal ? `${h.kcal} kcal` : "—"}</div>
+                  <div style={{ fontSize:10, color:"var(--yr-muted)", fontFamily:"var(--font-mono)", textTransform:"uppercase" }}>
+                    {new Date(h.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                  </div>
+                </div>
+              </div>
+            ))
+          )}
+        </div>
       </div>
 
       <div className={animOn ? "yr-stagger" : ""} style={{"--i":8}}>

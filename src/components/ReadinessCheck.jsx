@@ -4,10 +4,12 @@ const CHECKS = [
   { key:"energy",   label:"Energy",   opts:["1","2","3","4","5"] },
   { key:"sleep",    label:"Sleep",    opts:["Poor","Ok","Good"] },
   { key:"soreness", label:"Soreness", opts:["None","Mild","High"] },
+  { key:"cramps",   label:"Cramps",   opts:["None","Mild","High"] },
+  { key:"mood",     label:"Mood",     opts:["Low","Neutral","High"] },
 ];
 
 export default function ReadinessCheck({ readiness, showReadiness, setReadiness, setShowReadiness, cycleState }) {
-  const canSave = showReadiness?.energy && showReadiness?.sleep && showReadiness?.soreness;
+  const canSave = showReadiness?.energy && showReadiness?.sleep && showReadiness?.soreness && showReadiness?.cramps && showReadiness?.mood;
 
   if (!readiness && !showReadiness) return (
     <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", gap:12, padding:"14px 16px", borderRadius:14, border:"1px solid var(--yr-border)", background:"var(--yr-surface)" }}>

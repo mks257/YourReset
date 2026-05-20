@@ -128,13 +128,63 @@ export function getCycleState(cycleStartDate, cycleLength = 28) {
   return { dayOfCycle, phase, cycleLength, windows, ...PHASES[phase] };
 }
 
-// ── Workout adaptation ────────────────────────────────────────────────────
+// ── Readiness & Adaptation ────────────────────────────────────────────────
+export function getReadinessScore(r) {
+  if (!r) return null;
+  const map = { 
+    poor: 1, ok: 3, good: 5, 
+    none: 5, mild: 3, high: 1, 
+    low: 1, neutral: 3,
+    // Handle numeric strings or numbers directly
+    "1": 1, "2": 2, "3": 3, "4": 4, "5": 5
+  };
+  
+  const energy = Number(r.energy) || 1;
+  const sleep = (typeof r.sleep === 'number' ? r.sleep : map[r.sleep?.toLowerCase()]) || 3;
+  const sore = (typeof r.soreness === 'number' ? 6 - r.soreness : map[r.soreness?.toLowerCase()]) || 3;
+  const cramps = (typeof r.cramps === 'number' ? 6 - r.cramps : map[r.cramps?.toLowerCase()]) || 5;
+  const mood = (typeof r.mood === 'number' ? r.mood : map[r.mood?.toLowerCase()]) || 3;
+  
+  // Normalize to a 1-5 scale for each where 5 is best
+  // energy: 1-5 (5 is high energy)
+  // sleep: 1-5 (5 is good sleep)
+  // sore: if number 1-5 (1 is none, 5 is high), so 6-value makes it 5 is none.
+  // cramps: if number 1-5 (1 is none, 5 is high), so 6-value makes it 5 is none.
+  // mood: 1-5 (5 is high/good mood)
+  
+  const raw = energy + sleep + sore + cramps + mood;
+  return Math.round((raw / 25) * 10); // 1–10 scale
+}
+
+export function getAdjustedIntensity(original, score) {
+  const levels = ["low", "moderate", "high", "peak"];
+  const idx = levels.indexOf(original);
+  if (idx === -1) return original;
+
+  if (score <= 4) return levels[Math.max(0, idx - 2)];
+  if (score <= 6) return levels[Math.max(0, idx - 1)];
+  if (score >= 9 && idx < levels.length - 1) return levels[idx + 1];
+  return original;
+}
+
+export function buildReadinessNote(original, adjusted, score) {
+  if (score <= 4) return "Readiness is low. Plan significantly dialed back for recovery.";
+  if (score <= 6) return "Energy is modest. Intensity reduced to match your signals.";
+  if (adjusted !== original && score >= 9) return "Readiness is peak. Today is a great day to push harder.";
+  if (score >= 8) return "Strong readiness today. You're clear for the full plan.";
+  return "Plan balanced based on your morning check-in.";
+}
+
 export function adaptVolume(parsedSets, intensity, readiness) {
   let mod = 1;
-  if (readiness) {
-    if (readiness.energy <= 2 || readiness.soreness === 'high') mod = 0.7;
-    else if (readiness.energy >= 4 && (intensity === 'high' || intensity === 'peak')) mod = 1.1;
+  const score = getReadinessScore(readiness);
+  
+  if (score !== null) {
+    if (score <= 4) mod = 0.6;
+    else if (score <= 6) mod = 0.8;
+    else if (score >= 9) mod = 1.1;
   }
+  
   if (intensity === 'low') mod = Math.min(mod, 0.8);
   return Math.max(1, Math.round(parsedSets * mod));
 }
