@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { PHASES, PHASE_EMOJI, PCOS_GUIDANCE, getPhaseWindows, getCycleState } from "../cycleEngine";
 import { useCountUp } from "./MotionHooks";
+import * as Storage from "../storage";
 
 export default function CycleTab({ cycleState, profile, readiness, setReadiness, onResetProfile, onUpdateProfile, motion = "full" }) {
   const [showPcos, setShowPcos] = useState(false);
@@ -85,9 +86,9 @@ export default function CycleTab({ cycleState, profile, readiness, setReadiness,
     const next = Math.min(45, Math.max(21, cur.current + delta));
     cur.current = next; setDisplayed(next);
     if (onUpdateProfile) {
-      const current = JSON.parse(localStorage.getItem("yr_profile") || "{}");
-      const p = { ...current, cycleLength: next };
-      localStorage.setItem("yr_profile", JSON.stringify(p));
+      // Route through Storage so Capacitor Preferences receives the write.
+      // onUpdateProfile in App.jsx already calls Storage.set("profile", ...)
+      // so we just hand it the diff.
       onUpdateProfile({ cycleLength: next });
     }
   };

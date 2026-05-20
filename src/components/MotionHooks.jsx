@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import * as Storage from "../storage";
 
 /** Count up a number from 0 to target with optional delay */
 export function useCountUp(target, { duration = 700, delay = 0, enabled = true } = {}) {
@@ -22,19 +23,17 @@ export function useCountUp(target, { duration = 700, delay = 0, enabled = true }
   return val;
 }
 
-/** Simple tweaks state with localStorage persistence */
+/** Simple tweaks state persisted via Capacitor Preferences (Storage). */
 export function useTweaks(defaults) {
-  const [tweaks, setTweaksState] = useState(() => {
-    try {
-      const saved = JSON.parse(localStorage.getItem("yr_tweaks") || "{}");
-      return { ...defaults, ...saved };
-    } catch { return defaults; }
-  });
+  const [tweaks, setTweaksState] = useState(() => ({
+    ...defaults,
+    ...(Storage.get("tweaks", {}) || {}),
+  }));
 
   const setTweak = (key, value) => {
     setTweaksState(prev => {
       const next = { ...prev, [key]: value };
-      localStorage.setItem("yr_tweaks", JSON.stringify(next));
+      Storage.set("tweaks", next);
       return next;
     });
   };
