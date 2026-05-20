@@ -15,6 +15,7 @@ import BackgroundAtmosphere from "./components/BackgroundAtmosphere";
 import FriendsTab from "./components/FriendsTab";
 import { useTweaks } from "./components/MotionHooks";
 import * as Notifications from "./notificationService";
+import * as HealthService from "./healthService";
 
 const TWEAK_DEFAULTS = {
   direction: "editorial",
