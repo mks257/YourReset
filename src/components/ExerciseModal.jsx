@@ -36,11 +36,14 @@ function ExerciseModal({ ex, dayColor, onClose, onToggleDone, isDone, selectedDa
           className="em-scroll"
           style={{
             width: "100%", maxWidth: 480,
-            maxHeight: "94vh", overflowY: "auto",
+            // dvh respects iOS dynamic toolbar; vh would leave content under it
+            maxHeight: "94dvh", overflowY: "auto",
             background: T.card,
             borderRadius: "28px 28px 0 0",
             animation: "modal-slide-up 0.3s cubic-bezier(0.22,1,0.36,1) both",
             boxShadow: `0 -8px 80px ${dayColor}18, 0 -2px 0 ${dayColor}33`,
+            // Prevent overscroll from dismissing modal awkwardly
+            overscrollBehavior: "contain",
           }}
         >
           {/* Drag handle */}
@@ -50,7 +53,7 @@ function ExerciseModal({ ex, dayColor, onClose, onToggleDone, isDone, selectedDa
             margin: "12px auto 0",
           }} />
 
-          <div style={{ padding: "24px 22px 100px" }}>
+          <div style={{ padding: "24px 22px calc(100px + env(safe-area-inset-bottom))" }}>
 
             {/* Name + tags */}
             <div style={{ marginBottom: 20 }}>
