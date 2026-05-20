@@ -182,3 +182,26 @@ export const getExerciseHistory = (exerciseId) => {
   }
   return results.sort((a, b) => a.weekKey.localeCompare(b.weekKey));
 };
+
+/**
+ * Notification preferences. Stored as a single object so we have one
+ * source of truth for the Settings UI + the App.jsx scheduler bootstrap.
+ *
+ * Shape:
+ *   {
+ *     workoutReminderEnabled: boolean,
+ *     workoutReminderTime:    string,   // "HH:mm" local
+ *     cyclePhaseAlertsEnabled: boolean,
+ *   }
+ */
+const DEFAULT_NOTIFICATION_PREFS = {
+  workoutReminderEnabled: false,
+  workoutReminderTime: "08:00",
+  cyclePhaseAlertsEnabled: false,
+};
+
+export const getNotificationPrefs = () =>
+  ({ ...DEFAULT_NOTIFICATION_PREFS, ...(get("notification_prefs", {}) || {}) });
+
+export const setNotificationPrefs = (prefs) =>
+  set("notification_prefs", { ...DEFAULT_NOTIFICATION_PREFS, ...prefs });

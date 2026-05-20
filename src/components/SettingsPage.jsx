@@ -49,7 +49,11 @@ const ACTIVITIES = [
   { id:"very_active", label:"Very Active", sub:"2× daily / hard labour" },
 ];
 
-export default function SettingsPage({ profile, onSave, onClearAll, theme, onSetTheme }) {
+export default function SettingsPage({
+  profile, onSave, onClearAll,
+  theme, onSetTheme,
+  notificationPrefs, onSetNotificationPrefs,
+}) {
   // Existing fields
   const [name,      setName]      = useState(profile.name || "");
   const [goal,      setGoal]      = useState(profile.goal || "fat_loss");
@@ -365,6 +369,126 @@ export default function SettingsPage({ profile, onSave, onClearAll, theme, onSet
               ))}
             </div>
           </div>
+        </div>
+      )}
+
+      {/* Notifications — local-only. No server push. */}
+      {onSetNotificationPrefs && notificationPrefs && (
+        <div style={{ borderTop: "1px solid var(--yr-border)", paddingTop: 20 }}>
+          <div className="yr-overline">Notifications</div>
+          <p style={{ fontSize: 12, color: "var(--yr-muted)", margin: "8px 0 16px", lineHeight: 1.6 }}>
+            Local reminders scheduled on your device. Nothing pushed from a server.
+          </p>
+
+          {/* Daily workout reminder */}
+          <div style={{
+            display: "flex", alignItems: "center", gap: 12,
+            width: "100%", padding: "14px 16px",
+            background: "var(--yr-surface)",
+            border: "1px solid var(--yr-border)",
+            borderRadius: 14, marginBottom: 8, minHeight: 56,
+          }}>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontSize: 14, fontWeight: 500, color: "var(--yr-text)" }}>
+                Daily workout reminder
+              </div>
+              <div style={{ fontSize: 11, color: "var(--yr-muted)", marginTop: 2 }}>
+                Nudges you at the time you pick. Local notification only.
+              </div>
+            </div>
+            <button
+              onClick={() => onSetNotificationPrefs({
+                ...notificationPrefs,
+                workoutReminderEnabled: !notificationPrefs.workoutReminderEnabled,
+              })}
+              aria-pressed={notificationPrefs.workoutReminderEnabled}
+              aria-label="Toggle daily workout reminder"
+              style={{
+                width: 52, height: 30, borderRadius: 999, border: "1px solid var(--yr-border)",
+                background: notificationPrefs.workoutReminderEnabled ? "var(--phase-accent)" : "var(--yr-surface-2)",
+                position: "relative", cursor: "pointer", flexShrink: 0, padding: 0, outline: "none",
+              }}
+            >
+              <span style={{
+                position: "absolute", top: 3,
+                left: notificationPrefs.workoutReminderEnabled ? 25 : 3,
+                width: 22, height: 22, borderRadius: "50%", background: "#fff",
+                transition: "left 0.18s",
+              }} />
+            </button>
+          </div>
+
+          {/* Time picker — only shown when daily reminder is on */}
+          {notificationPrefs.workoutReminderEnabled && (
+            <div style={{
+              display: "flex", alignItems: "center", gap: 12,
+              width: "100%", padding: "14px 16px",
+              background: "var(--yr-surface)",
+              border: "1px solid var(--yr-border)",
+              borderRadius: 14, marginBottom: 8, minHeight: 56,
+            }}>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: 14, fontWeight: 500, color: "var(--yr-text)" }}>Reminder time</div>
+                <div style={{ fontSize: 11, color: "var(--yr-muted)", marginTop: 2 }}>Local time on this device</div>
+              </div>
+              <input
+                type="time"
+                value={notificationPrefs.workoutReminderTime || "08:00"}
+                onChange={e => onSetNotificationPrefs({
+                  ...notificationPrefs,
+                  workoutReminderTime: e.target.value,
+                })}
+                aria-label="Daily reminder time"
+                style={{
+                  background: "var(--yr-bg)", color: "var(--yr-text)",
+                  border: "1px solid var(--yr-border)", borderRadius: 8,
+                  padding: "8px 12px", fontSize: 14, minHeight: 36,
+                  fontFamily: "var(--font-mono)",
+                  outline: "none",
+                }}
+              />
+            </div>
+          )}
+
+          {/* Cycle phase alerts — only meaningful when cycle tracking is on */}
+          {profile?.cycleTracking && (
+            <div style={{
+              display: "flex", alignItems: "center", gap: 12,
+              width: "100%", padding: "14px 16px",
+              background: "var(--yr-surface)",
+              border: "1px solid var(--yr-border)",
+              borderRadius: 14, marginBottom: 8, minHeight: 56,
+            }}>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: 14, fontWeight: 500, color: "var(--yr-text)" }}>
+                  Cycle phase alerts
+                </div>
+                <div style={{ fontSize: 11, color: "var(--yr-muted)", marginTop: 2 }}>
+                  Notified at 9am when a new phase starts.
+                </div>
+              </div>
+              <button
+                onClick={() => onSetNotificationPrefs({
+                  ...notificationPrefs,
+                  cyclePhaseAlertsEnabled: !notificationPrefs.cyclePhaseAlertsEnabled,
+                })}
+                aria-pressed={notificationPrefs.cyclePhaseAlertsEnabled}
+                aria-label="Toggle cycle phase alerts"
+                style={{
+                  width: 52, height: 30, borderRadius: 999, border: "1px solid var(--yr-border)",
+                  background: notificationPrefs.cyclePhaseAlertsEnabled ? "var(--phase-accent)" : "var(--yr-surface-2)",
+                  position: "relative", cursor: "pointer", flexShrink: 0, padding: 0, outline: "none",
+                }}
+              >
+                <span style={{
+                  position: "absolute", top: 3,
+                  left: notificationPrefs.cyclePhaseAlertsEnabled ? 25 : 3,
+                  width: 22, height: 22, borderRadius: "50%", background: "#fff",
+                  transition: "left 0.18s",
+                }} />
+              </button>
+            </div>
+          )}
         </div>
       )}
 
