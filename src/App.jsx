@@ -14,6 +14,7 @@ import ExerciseModal from "./components/ExerciseModal";
 import BackgroundAtmosphere from "./components/BackgroundAtmosphere";
 import FriendsTab from "./components/FriendsTab";
 import { useTweaks } from "./components/MotionHooks";
+import * as Notifications from "./notificationService";
 
 const TWEAK_DEFAULTS = {
   direction: "editorial",
@@ -138,6 +139,7 @@ export default function App() {
   const [readiness, setReadiness]           = useState(() => Storage.get(`readiness_${Storage.getTodayKey()}`, null));
   const [showReadiness, setShowReadiness]   = useState(false);
   const [dbReady, setDbReady] = useState(false);
+  const [notificationPrefs, setNotificationPrefsState] = useState(() => Storage.getNotificationPrefs());
 
   const cycleState = profile?.cycleTracking
     ? getCycleState(profile.cycleStartDate, profile.cycleLength)
@@ -171,6 +173,68 @@ export default function App() {
     if (isDBReady()) { setDbReady(true); return; }
     getExerciseDB().then(() => setDbReady(true));
   }, []);
+
+  // Notification scheduler — re-runs whenever the user toggles a pref OR
+  // anything that affects what we'd schedule (name for the body text,
+  // cycle start/length for phase alerts). The service no-ops on web.
+  useEffect(() => {
+    let cancelled = false;
+    async function syncSchedules() {
+      // Workout reminder
+      if (notificationPrefs.workoutReminderEnabled) {
+        await Notifications.scheduleDailyWorkoutReminder(
+          notificationPrefs.workoutReminderTime,
+          profile?.name || "You",
+        );
+      } else {
+        await Notifications.cancelDailyWorkoutReminder();
+      }
+      // Cycle phase alerts — only schedule if the user actually tracks
+      // a cycle AND has a real start date. Otherwise cancel.
+      const canSchedulePhases =
+        notificationPrefs.cyclePhaseAlertsEnabled &&
+        profile?.cycleTracking &&
+        profile?.cycleStartDate;
+      if (canSchedulePhases) {
+        await Notifications.scheduleCyclePhaseAlerts(
+          profile.cycleStartDate,
+          profile.cycleLength || 28,
+        );
+      } else {
+        await Notifications.cancelCyclePhaseAlerts();
+      }
+      if (cancelled) return;
+    }
+    syncSchedules();
+    return () => { cancelled = true; };
+  }, [
+    notificationPrefs.workoutReminderEnabled,
+    notificationPrefs.workoutReminderTime,
+    notificationPrefs.cyclePhaseAlertsEnabled,
+    profile?.name,
+    profile?.cycleTracking,
+    profile?.cycleStartDate,
+    profile?.cycleLength,
+  ]);
+
+  // Wrapper for Settings: when the user flips a toggle, request permission
+  // first if needed (the service handles the OS prompt), then persist + state.
+  const handleSetNotificationPrefs = async (nextPrefs) => {
+    const turningOn =
+      (nextPrefs.workoutReminderEnabled && !notificationPrefs.workoutReminderEnabled) ||
+      (nextPrefs.cyclePhaseAlertsEnabled && !notificationPrefs.cyclePhaseAlertsEnabled);
+    if (turningOn) {
+      const granted = await Notifications.requestPermission();
+      // If permission denied on native, surface that to the user by
+      // refusing to flip the toggle on. On web (unavailable) we let it
+      // through so Settings UX is consistent — scheduling is a no-op anyway.
+      if (!granted && (await Notifications.checkPermission()) === "denied") {
+        return; // permission denied — don't update state
+      }
+    }
+    Storage.setNotificationPrefs(nextPrefs);
+    setNotificationPrefsState(nextPrefs);
+  };
 
   const handleOnboardingComplete = (p) => { Storage.set("profile", p); setProfile(p); };
 
@@ -273,12 +337,19 @@ export default function App() {
           profile={profile}
           theme={tweaks.theme}
           onSetTheme={(t) => setTweak("theme", t)}
+          notificationPrefs={notificationPrefs}
+          onSetNotificationPrefs={handleSetNotificationPrefs}
           onSave={(p) => { Storage.set("profile", p); setProfile(p); }}
           onClearAll={() => {
             // Storage.clearAll() has already wiped Preferences; here we
             // reset React state so the app routes back to onboarding
             // without a window.location.reload() that would flash the
             // WKWebView white on iOS.
+            // Notification prefs were wiped by clearAll; cancel any
+            // scheduled notifications too so they don't fire post-reset.
+            Notifications.cancelDailyWorkoutReminder();
+            Notifications.cancelCyclePhaseAlerts();
+            setNotificationPrefsState(Storage.getNotificationPrefs());
             setProfile(null);
             setDone({});
             setSwapped({});
