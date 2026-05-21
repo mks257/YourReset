@@ -49,9 +49,10 @@ function WorkoutLogger({ ex, selectedDay, weekKey, dayColor }) {
         }}>{completedSets}/{numSets} done</div>
       </div>
 
-      {/* Column headers */}
-      <div style={{ display: "grid", gridTemplateColumns: "28px 1fr 1fr 44px", gap: 6, marginBottom: 6 }}>
-        {["", "Weight", `Reps (×${ex.reps})`, "RPE"].map((h, i) => (
+      {/* Column headers — RPE moved out of the input grid into a per-set
+          pill row below (native iOS pickers wheel poorly inside modals). */}
+      <div style={{ display: "grid", gridTemplateColumns: "44px 1fr 1fr", gap: 6, marginBottom: 6 }}>
+        {["", "Weight", `Reps (×${ex.reps})`].map((h, i) => (
           <div key={i} style={{ fontSize: "0.58rem", color: T.muted, textAlign: i > 0 ? "center" : "left" }}>{h}</div>
         ))}
       </div>
@@ -67,60 +68,101 @@ function WorkoutLogger({ ex, selectedDay, weekKey, dayColor }) {
         const showBump = suggestIncrease && i === 0;
 
         return (
-          <div key={i} style={{ marginBottom: i < sets.length - 1 ? 10 : 6 }}>
-            {/* Input row */}
-            <div style={{ display: "grid", gridTemplateColumns: "28px 1fr 1fr 44px", gap: 6, alignItems: "center" }}>
-              <button onClick={() => update(i, "done", !s.done)} style={{
-                width: 24, height: 24, borderRadius: 7,
-                border: `1px solid ${s.done ? T.green : T.border}`,
-                background: s.done ? `${T.green}20` : "transparent",
-                color: s.done ? T.green : T.muted,
-                cursor: "pointer", fontSize: "0.68rem",
-                display: "flex", alignItems: "center", justifyContent: "center",
-              }}>{s.done ? "✓" : i + 1}</button>
+          <div key={i} style={{ marginBottom: i < sets.length - 1 ? 14 : 6 }}>
+            {/* Input row — set-done button is 44pt outer tap area with a
+                visible 24px inner circle, matching iOS HIG (44pt minimum). */}
+            <div style={{ display: "grid", gridTemplateColumns: "44px 1fr 1fr", gap: 6, alignItems: "center" }}>
+              <button
+                onClick={() => update(i, "done", !s.done)}
+                aria-label={s.done ? `Mark set ${i + 1} not done` : `Mark set ${i + 1} done`}
+                aria-pressed={s.done}
+                style={{
+                  width: 44, height: 44,
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                  background: "transparent", border: "none", padding: 0,
+                  cursor: "pointer",
+                }}
+              >
+                <span style={{
+                  width: 24, height: 24, borderRadius: 7,
+                  border: `1px solid ${s.done ? T.green : T.border}`,
+                  background: s.done ? `${T.green}20` : "transparent",
+                  color: s.done ? T.green : T.muted,
+                  fontSize: "0.68rem",
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                }}>
+                  {s.done ? "✓" : i + 1}
+                </span>
+              </button>
 
               <input
+                type="number"
+                inputMode="decimal"
+                step="0.5"
                 placeholder="kg / lb"
                 value={s.weight}
                 onChange={e => update(i, "weight", e.target.value)}
                 style={{
-                  padding: "7px 8px", borderRadius: 8,
+                  padding: "10px 8px", borderRadius: 8,
                   border: `1px solid ${s.done ? T.green + "44" : T.border}`,
-                  background: T.bg, color: T.text, fontSize: "0.8rem",
-                  outline: "none", width: "100%",
+                  background: T.bg, color: T.text, fontSize: "0.9rem",
+                  outline: "none", width: "100%", minHeight: 36,
+                  boxSizing: "border-box",
                 }}
               />
               <input
+                type="number"
+                inputMode="numeric"
                 placeholder={ex.reps}
                 value={s.reps}
                 onChange={e => update(i, "reps", e.target.value)}
                 style={{
-                  padding: "7px 8px", borderRadius: 8,
+                  padding: "10px 8px", borderRadius: 8,
                   border: `1px solid ${s.done ? T.green + "44" : T.border}`,
-                  background: T.bg, color: T.text, fontSize: "0.8rem",
-                  outline: "none", width: "100%",
+                  background: T.bg, color: T.text, fontSize: "0.9rem",
+                  outline: "none", width: "100%", minHeight: 36,
+                  boxSizing: "border-box",
                 }}
               />
-              <select
-                value={s.rpe}
-                onChange={e => update(i, "rpe", e.target.value)}
-                style={{
-                  padding: "6px 2px", borderRadius: 8,
-                  border: `1px solid ${T.border}`,
-                  background: T.bg, color: T.text,
-                  fontSize: "0.72rem", outline: "none",
-                }}
-              >
-                <option value="">—</option>
-                {[5, 6, 7, 8, 9, 10].map(r => <option key={r} value={r}>{r}</option>)}
-              </select>
+            </div>
+
+            {/* RPE pills — replaces the native <select> wheel picker which
+                was a tiny gym-hostile UX inside a modal. */}
+            <div style={{
+              display: "flex", gap: 4, marginTop: 8,
+              paddingLeft: 44, // align with input columns (past the 44pt done button)
+              alignItems: "center",
+            }}>
+              <span style={{ fontSize: "0.55rem", color: T.muted, textTransform: "uppercase", letterSpacing: "0.08em", marginRight: 4 }}>RPE</span>
+              {[5, 6, 7, 8, 9, 10].map(r => {
+                const isActive = String(s.rpe) === String(r);
+                return (
+                  <button
+                    key={r}
+                    onClick={() => update(i, "rpe", isActive ? "" : String(r))}
+                    aria-label={`RPE ${r}`}
+                    aria-pressed={isActive}
+                    style={{
+                      flex: 1, minHeight: 32, minWidth: 32,
+                      borderRadius: 8,
+                      border: `1px solid ${isActive ? T.green : T.border}`,
+                      background: isActive ? `${T.green}1f` : "transparent",
+                      color: isActive ? T.green : T.muted,
+                      fontFamily: "inherit", fontSize: "0.72rem", fontWeight: 600,
+                      cursor: "pointer", padding: 0,
+                    }}
+                  >
+                    {r}
+                  </button>
+                );
+              })}
             </div>
 
             {/* Per-set last session line */}
             {(prevStr || showBump) && (
               <div style={{
                 display: "flex", alignItems: "center", gap: 6,
-                paddingLeft: 34, marginTop: 4,
+                paddingLeft: 44, marginTop: 4,
               }}>
                 {prevStr && (
                   <span style={{ fontSize: "0.67rem", color: T.muted }}>

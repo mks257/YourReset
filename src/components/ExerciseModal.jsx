@@ -1,14 +1,63 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import WorkoutLogger from "./WorkoutLogger";
 import TrendAnalysis from "./TrendAnalysis";
 import { T } from "../theme";
 import * as Storage from "../storage";
+import { Browser } from "@capacitor/browser";
+import { Capacitor } from "@capacitor/core";
+
+// Tap into SFSafariViewController on iOS via @capacitor/browser. Falls
+// back to window.open on web. Previously used a raw <a target="_blank">
+// which on Capacitor iOS navigates the entire WKWebView away from the
+// app and loses all state.
+async function openYouTube(url) {
+  try {
+    await Browser.open({ url, presentationStyle: "popover" });
+  } catch {
+    if (typeof window !== "undefined") {
+      window.open(url, "_blank", "noopener,noreferrer");
+    }
+  }
+}
+
+// Threshold for swipe-to-dismiss. Matches typical iOS bottom-sheet feel.
+const SWIPE_CLOSE_THRESHOLD_PX = 90;
 
 function ExerciseModal({ ex, dayColor, onClose, onToggleDone, isDone, selectedDay, weekKey, phaseNote }) {
   const [ytLoaded, setYtLoaded] = useState(false);
+  const [dragY, setDragY] = useState(0);   // current downward drag offset
+  const [dragging, setDragging] = useState(false);
+  const startYRef = useRef(0);
+  const sheetRef = useRef(null);
 
   const ytQuery = encodeURIComponent(`${ex.name} ${ex.muscle} proper form`);
   const ytSearchUrl = `https://www.youtube.com/results?search_query=${ytQuery}`;
+
+  // Swipe-to-dismiss: track touch on the sheet, allow downward drag only,
+  // close if past threshold, otherwise spring back. Only triggers when
+  // the sheet is scrolled to the top so we don't fight content scroll.
+  const onTouchStart = (e) => {
+    const sheet = sheetRef.current;
+    // Don't start a drag if user is mid-scroll inside the sheet
+    if (sheet && sheet.scrollTop > 0) return;
+    startYRef.current = e.touches[0].clientY;
+    setDragging(true);
+  };
+  const onTouchMove = (e) => {
+    if (!dragging) return;
+    const delta = e.touches[0].clientY - startYRef.current;
+    if (delta > 0) setDragY(delta);
+  };
+  const onTouchEnd = () => {
+    if (!dragging) return;
+    setDragging(false);
+    if (dragY > SWIPE_CLOSE_THRESHOLD_PX) {
+      onClose();
+    } else {
+      // Spring back via state reset; CSS transition handles the animation
+      setDragY(0);
+    }
+  };
 
   const formCues = ex.formCues?.length ? ex.formCues : [ex.tip].filter(Boolean);
 
@@ -32,7 +81,12 @@ function ExerciseModal({ ex, dayColor, onClose, onToggleDone, isDone, selectedDa
         }}
       >
         <div
+          ref={sheetRef}
           onClick={e => e.stopPropagation()}
+          onTouchStart={onTouchStart}
+          onTouchMove={onTouchMove}
+          onTouchEnd={onTouchEnd}
+          onTouchCancel={onTouchEnd}
           className="em-scroll"
           style={{
             width: "100%", maxWidth: 480,
@@ -40,10 +94,16 @@ function ExerciseModal({ ex, dayColor, onClose, onToggleDone, isDone, selectedDa
             maxHeight: "94dvh", overflowY: "auto",
             background: T.card,
             borderRadius: "28px 28px 0 0",
-            animation: "modal-slide-up 0.3s cubic-bezier(0.22,1,0.36,1) both",
+            // Skip entry animation while user is dragging (would fight gesture)
+            animation: dragging ? "none" : "modal-slide-up 0.3s cubic-bezier(0.22,1,0.36,1) both",
             boxShadow: `0 -8px 80px ${dayColor}18, 0 -2px 0 ${dayColor}33`,
             // Prevent overscroll from dismissing modal awkwardly
             overscrollBehavior: "contain",
+            // Live drag follow + spring-back when not actively dragging
+            transform: `translateY(${dragY}px)`,
+            transition: dragging ? "none" : "transform 0.22s cubic-bezier(0.22,1,0.36,1)",
+            // Slight backdrop dim reduction as user pulls down (nicer than abrupt close)
+            opacity: 1 - Math.min(0.35, dragY / 400),
           }}
         >
           {/* Drag handle */}
@@ -188,22 +248,22 @@ function ExerciseModal({ ex, dayColor, onClose, onToggleDone, isDone, selectedDa
                     <div style={{ fontSize: "0.7rem", color: T.muted }}>Opens in YouTube</div>
                     <button onClick={() => setYtLoaded(false)} style={{ background: "none", border: "none", color: T.muted, cursor: "pointer", fontSize: "0.8rem" }}>✕</button>
                   </div>
-                  <a
-                    href={ytSearchUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
+                  <button
+                    onClick={() => openYouTube(ytSearchUrl)}
                     style={{
-                      display: "block", padding: "10px 0", borderRadius: 10,
+                      display: "block", width: "100%",
+                      padding: "12px 0", borderRadius: 10,
                       textAlign: "center",
                       background: "rgba(255,0,0,0.15)",
                       color: "#ff6b6b", fontFamily: "'Outfit',sans-serif",
                       fontWeight: 700, fontSize: "0.82rem",
-                      textDecoration: "none",
+                      cursor: "pointer",
                       border: "1px solid rgba(255,0,0,0.2)",
+                      minHeight: 44,
                     }}
                   >
                     ▶ Open YouTube search
-                  </a>
+                  </button>
                 </div>
               )}
             </div>
