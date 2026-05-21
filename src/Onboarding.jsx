@@ -10,6 +10,17 @@ export default function Onboarding({ onComplete }) {
   const [cycleLength, setCycleLength] = useState(28);
   const [equipment, setEquipment] = useState(["dumbbells", "machines", "cardio"]);
 
+  // Body metrics — feed TDEE in NutritionTab and goal-weight progress in
+  // MetricsTab. Optional in onboarding (skippable) but strongly nudged
+  // since they unlock the personalised calorie target immediately.
+  const [age, setAge] = useState("");
+  const [weight, setWeight] = useState("");
+  const [weightUnit, setWeightUnit] = useState("kg");
+  const [heightUnit, setHeightUnit] = useState("cm");
+  const [heightCm, setHeightCm] = useState("");
+  const [heightFt, setHeightFt] = useState("");
+  const [heightIn, setHeightIn] = useState("");
+
   const GOALS = [
     { id: "fat_loss", label: "Fat Loss", icon: "🔥", desc: "Sustainable deficit & preservation" },
     { id: "strength", label: "Strength", icon: "💪", desc: "Hypertrophy & metabolic power" },
@@ -35,6 +46,17 @@ export default function Onboarding({ onComplete }) {
   const back = () => setStep(s => Math.max(0, s - 1));
 
   const finish = () => {
+    // Normalise height into a single numeric field matching SettingsPage's
+    // existing schema: cm if heightUnit === "cm", total inches otherwise.
+    let height = null;
+    if (heightUnit === "cm" && heightCm) {
+      height = parseFloat(heightCm);
+    } else if (heightUnit === "ft") {
+      const ft = parseInt(heightFt || 0);
+      const inches = parseInt(heightIn || 0);
+      if (ft || inches) height = ft * 12 + inches;
+    }
+
     onComplete({
       name: name.trim() || "You",
       goal,
@@ -43,6 +65,15 @@ export default function Onboarding({ onComplete }) {
       cycleStartDate: cycleOption === "track" ? cycleStart : null,
       cycleLength: cycleOption === "track" ? cycleLength : null,
       equipment,
+      // Body metrics — null if skipped; SettingsPage already handles missing
+      // values and NutritionTab gates TDEE on hasMetrics (weight && height).
+      age: age ? parseFloat(age) : null,
+      weight: weight ? parseFloat(weight) : null,
+      weightUnit,
+      height,
+      heightUnit,
+      // Default activity level — user can refine later in Settings.
+      activityLevel: "moderate",
     });
   };
 
@@ -77,13 +108,14 @@ export default function Onboarding({ onComplete }) {
     >
       <div style={{ maxWidth: 320, margin: "0 auto", width: "100%" }}>
         <div className="yr-overline" style={{ marginBottom: 8, textAlign: "left" }}>Your Name</div>
-        <input 
+        <input
           className="yr-input"
           style={{ fontSize: 18, padding: "16px 20px", borderRadius: 16 }}
           placeholder="How should we call you?"
           value={name}
           onChange={e => setName(e.target.value)}
-          autoFocus
+          // No autoFocus: iOS HIG discourages auto-showing the keyboard
+          // on first render — let the user see the welcome message first.
         />
         <button 
           className="yr-hub-cta" 
@@ -209,16 +241,16 @@ export default function Onboarding({ onComplete }) {
     </ScreenWrapper>,
 
     // Step 4: Equipment
-    <ScreenWrapper 
+    <ScreenWrapper
       key="equip"
-      title="Your Space" 
+      title="Your Space"
       subtitle="We'll construct your plan based on what's available."
       eyebrow="Logistics"
     >
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(140px, 1fr))", gap: 10, maxWidth: 640, margin: "0 auto" }}>
         {EQUIPMENT_OPTIONS.map(eq => (
-          <button 
-            key={eq.id} 
+          <button
+            key={eq.id}
             className={`yr-onboarding-chip ${equipment.includes(eq.id) ? "active" : ""}`}
             onClick={() => toggleEquip(eq.id)}
           >
@@ -228,7 +260,138 @@ export default function Onboarding({ onComplete }) {
       </div>
       <div className="yr-onboarding-footer">
         <button className="yr-onboarding-back" onClick={() => setStep(gender === "female" ? 3 : 2)}>← Back</button>
-        <button className="yr-hub-cta" onClick={finish} disabled={equipment.length === 0}>Complete Setup</button>
+        <button className="yr-hub-cta" onClick={next} disabled={equipment.length === 0}>Continue</button>
+      </div>
+    </ScreenWrapper>,
+
+    // Step 5: Body metrics (skippable). Powers Mifflin–St Jeor TDEE in
+    // NutritionTab and goal-weight progress in MetricsTab. Empty values
+    // are persisted as null and surfaced as a "Add your body metrics"
+    // prompt in NutritionTab so the user can complete it later.
+    <ScreenWrapper
+      key="metrics"
+      title="Your Numbers"
+      subtitle="Optional — but unlocks your personalised calorie target right away."
+      eyebrow="Body"
+    >
+      <div style={{ display: "flex", flexDirection: "column", gap: 16, maxWidth: 420, margin: "0 auto", width: "100%" }}>
+
+        {/* Age */}
+        <div>
+          <div className="yr-overline" style={{ marginBottom: 8 }}>Age</div>
+          <input
+            className="yr-input"
+            type="number"
+            inputMode="numeric"
+            min="13"
+            max="120"
+            placeholder="e.g. 28"
+            value={age}
+            onChange={e => setAge(e.target.value)}
+            style={{ fontSize: 16, padding: "14px 16px", borderRadius: 12, width: "100%", boxSizing: "border-box" }}
+          />
+        </div>
+
+        {/* Weight + unit toggle */}
+        <div>
+          <div className="yr-overline" style={{ marginBottom: 8, display: "flex", justifyContent: "space-between" }}>
+            <span>Weight</span>
+            <div style={{ display: "flex", gap: 6 }}>
+              {["kg", "lb"].map(u => (
+                <button
+                  key={u}
+                  type="button"
+                  onClick={() => setWeightUnit(u)}
+                  className={`yr-onboarding-chip ${weightUnit === u ? "active" : ""}`}
+                  style={{ padding: "4px 10px", fontSize: 11 }}
+                >
+                  {u}
+                </button>
+              ))}
+            </div>
+          </div>
+          <input
+            className="yr-input"
+            type="number"
+            inputMode="decimal"
+            min="20"
+            max="500"
+            step="0.1"
+            placeholder={weightUnit === "kg" ? "e.g. 65" : "e.g. 143"}
+            value={weight}
+            onChange={e => setWeight(e.target.value)}
+            style={{ fontSize: 16, padding: "14px 16px", borderRadius: 12, width: "100%", boxSizing: "border-box" }}
+          />
+        </div>
+
+        {/* Height + unit toggle */}
+        <div>
+          <div className="yr-overline" style={{ marginBottom: 8, display: "flex", justifyContent: "space-between" }}>
+            <span>Height</span>
+            <div style={{ display: "flex", gap: 6 }}>
+              {["cm", "ft"].map(u => (
+                <button
+                  key={u}
+                  type="button"
+                  onClick={() => setHeightUnit(u)}
+                  className={`yr-onboarding-chip ${heightUnit === u ? "active" : ""}`}
+                  style={{ padding: "4px 10px", fontSize: 11 }}
+                >
+                  {u}
+                </button>
+              ))}
+            </div>
+          </div>
+          {heightUnit === "cm" ? (
+            <input
+              className="yr-input"
+              type="number"
+              inputMode="numeric"
+              min="100"
+              max="250"
+              placeholder="e.g. 165"
+              value={heightCm}
+              onChange={e => setHeightCm(e.target.value)}
+              style={{ fontSize: 16, padding: "14px 16px", borderRadius: 12, width: "100%", boxSizing: "border-box" }}
+            />
+          ) : (
+            <div style={{ display: "flex", gap: 10 }}>
+              <input
+                className="yr-input"
+                type="number"
+                inputMode="numeric"
+                min="3"
+                max="8"
+                placeholder="ft"
+                value={heightFt}
+                onChange={e => setHeightFt(e.target.value)}
+                style={{ flex: 1, fontSize: 16, padding: "14px 16px", borderRadius: 12, boxSizing: "border-box", minWidth: 0 }}
+              />
+              <input
+                className="yr-input"
+                type="number"
+                inputMode="numeric"
+                min="0"
+                max="11"
+                placeholder="in"
+                value={heightIn}
+                onChange={e => setHeightIn(e.target.value)}
+                style={{ flex: 1, fontSize: 16, padding: "14px 16px", borderRadius: 12, boxSizing: "border-box", minWidth: 0 }}
+              />
+            </div>
+          )}
+        </div>
+
+        <p style={{ fontSize: 11, color: "var(--yr-muted)", lineHeight: 1.5, marginTop: 4 }}>
+          Used locally for calorie estimates. Never sent to a server. You can
+          update or remove these later in Settings.
+        </p>
+      </div>
+
+      <div className="yr-onboarding-footer">
+        <button className="yr-onboarding-back" onClick={back}>← Back</button>
+        <button className="yr-onboarding-back" onClick={finish}>Skip for now</button>
+        <button className="yr-hub-cta" onClick={finish}>Complete Setup</button>
       </div>
     </ScreenWrapper>
   ];
