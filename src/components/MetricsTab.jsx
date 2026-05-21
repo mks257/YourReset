@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useCountUp } from "./MotionHooks";
 import * as Storage from "../storage";
 import * as HealthService from "../healthService";
+import { computeMaintenanceTDEE, hasBodyMetrics } from "../nutritionEngine";
 
 // Goals are user-configurable in Settings (fallbacks if not set yet).
 const DEFAULT_STEP_GOAL = 10000;
@@ -58,6 +59,17 @@ export default function MetricsTab({ liveData, profile, motion = "full" }) {
   const stepsAnim = useCountUp(liveData?.steps ?? 0, { duration:1100, enabled: animOn && hasLiveData });
   const kcalAnim  = useCountUp(liveData?.kcal  ?? 0, { duration:900,  delay:60, enabled: animOn && hasLiveData });
 
+  // Energy balance: maintenance TDEE (no goal adjustment) − today's logged food.
+  // Positive sign on display = under maintenance (deficit, fat-loss direction).
+  // Negative sign = over maintenance (surplus). Hidden when profile lacks
+  // weight/height so we don't fabricate numbers.
+  const maintenance = hasBodyMetrics(profile) ? computeMaintenanceTDEE(profile) : null;
+  const todayFuel   = Storage.getFuelLog(Storage.getTodayKey());
+  const loggedKcal  = (todayFuel?.meals || []).reduce((s, m) => s + (parseFloat(m.calories) || 0), 0);
+  const deficit     = maintenance != null ? Math.round(maintenance - loggedKcal) : null;
+  // Progress bar: |deficit| / 1000 clamped — a visual cue, not a goal claim.
+  const deficitPct  = deficit != null ? Math.min(1, Math.abs(deficit) / 1000) : null;
+
   // Build rows. Each row may have a null value if the underlying data isn't
   // available — we render "—" instead of fake numbers.
   const rows = [
@@ -86,6 +98,23 @@ export default function MetricsTab({ liveData, profile, motion = "full" }) {
       goal: goalWeight,
       pct: weightProgress(liveData?.weight, goalWeight),
     },
+    // Energy balance — uses maintenance TDEE − logged kcal. Empty state
+    // ("—") shows when profile lacks weight/height.
+    deficit != null
+      ? {
+          label: "Energy balance",
+          value: deficit > 0 ? `−${deficit.toLocaleString()}` : `+${Math.abs(deficit).toLocaleString()}`,
+          unit: "kcal",
+          goal: `${maintenance.toLocaleString()} maint.`,
+          pct: deficitPct,
+        }
+      : {
+          label: "Energy balance",
+          value: null,
+          unit: "",
+          goal: "add metrics in Settings",
+          pct: null,
+        },
   ];
 
   // 30-day step trend

@@ -1,17 +1,13 @@
 import { useState, useMemo } from "react";
 import { getFuelLog, setFuelLog, getTodayKey } from "../storage";
-import { NUTRITION_PHASES, getDailyNudge, GOAL_NUTRITION, GOAL_NUTRITION_EXTRA, getGoalNudge } from "../nutritionEngine";
+import {
+  NUTRITION_PHASES, getDailyNudge,
+  GOAL_NUTRITION, GOAL_NUTRITION_EXTRA, getGoalNudge,
+  computeTargetCalories, hasBodyMetrics,
+} from "../nutritionEngine";
 import { PHASE_EMOJI } from "../cycleEngine";
 import { useCountUp } from "./MotionHooks";
 
-// ── TDEE calculation (Mifflin-St Jeor) ───────────────────────────────────
-const ACTIVITY_FACTORS = {
-  sedentary: 1.2, light: 1.375, moderate: 1.55, active: 1.725, very_active: 1.9,
-};
-const GOAL_ADJUSTMENTS = {
-  fat_loss: 0.80, muscle_tone: 1.0, strength: 1.10,
-  endurance: 1.05, wellness: 1.0, flexibility: 1.0,
-};
 const PHASE_KCAL_DELTA = {
   luteal_late: { delta: 250, note: "Late luteal phase increases energy needs. +250 kcal added to your budget." },
   menstrual:   { delta: 0,   note: null },
@@ -34,26 +30,8 @@ const MEAL_META = {
   snack:     { emoji: "🫐", label: "Snacks" },
 };
 
-function computeTDEE(profile) {
-  const weight = Number(profile.weight) || 65;
-  const height = Number(profile.height) || 165;
-  const age    = Number(profile.age)    || 28;
-  const gender = profile.gender || "female";
-
-  // Clamp to prevent impossible TDEE from unit mismatches
-  const wKg = Math.min(300, profile.weightUnit === "lb" ? weight * 0.453592 : weight);
-  const hCm = Math.min(250, profile.heightUnit === "ft" ? height * 2.54 : height);
-
-  let bmr;
-  if (gender === "male")        bmr = 10 * wKg + 6.25 * hCm - 5 * age + 5;
-  else if (gender === "female") bmr = 10 * wKg + 6.25 * hCm - 5 * age - 161;
-  else                          bmr = 10 * wKg + 6.25 * hCm - 5 * age - 78; // non-binary avg
-
-  const factor = ACTIVITY_FACTORS[profile.activityLevel] || 1.55;
-  const goalAdj = GOAL_ADJUSTMENTS[profile.goal] || 1.0;
-
-  return Math.max(1200, Math.round(bmr * factor * goalAdj));
-}
+// computeTDEE moved to nutritionEngine.computeTargetCalories so MetricsTab
+// can share the same formula for its energy-deficit row.
 
 // Build conic-gradient from macro pct array (e.g. [{pct:"35%", c:"..."}, ...])
 function buildConicGradient(macros) {
@@ -214,9 +192,11 @@ export default function NutritionTab({ cycleState, profile, onProfileUpdate, mot
   const phase = profile?.cycleTracking && cycleState ? cycleState?.phase : null;
   const goal  = profile?.goal || "wellness";
 
-  const hasMetrics = profile?.weight && profile?.height;
+  const hasMetrics = hasBodyMetrics(profile);
 
-  const calorieBase   = useMemo(() => hasMetrics ? computeTDEE(profile) : null, [profile]);
+  // Target calories (BMR × activity × goal adjustment). MetricsTab uses
+  // the maintenance variant (no goal adj) for its energy-deficit row.
+  const calorieBase   = useMemo(() => hasMetrics ? computeTargetCalories(profile) : null, [profile]);
   const phaseAdj      = PHASE_KCAL_DELTA[phase] || { delta: 0, note: null };
   const calorieTarget = calorieBase ? (Number(calorieBase) + Number(phaseAdj.delta)) : null;
 

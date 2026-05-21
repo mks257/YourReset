@@ -301,3 +301,82 @@ export function getGoalNudge(goal) {
   };
   return nudges[goal] || "Eat whole foods, stay hydrated, and listen to your body today.";
 }
+
+// ── TDEE / energy balance ────────────────────────────────────────────────
+// Centralised so NutritionTab (target calories) and MetricsTab (energy
+// deficit) consume the same formula. Previously duplicated in NutritionTab.
+
+export const ACTIVITY_FACTORS = {
+  sedentary: 1.2,
+  light: 1.375,
+  moderate: 1.55,
+  active: 1.725,
+  very_active: 1.9,
+};
+
+export const GOAL_ADJUSTMENTS = {
+  fat_loss: 0.80,
+  muscle_tone: 1.0,
+  strength: 1.10,
+  endurance: 1.05,
+  wellness: 1.0,
+  flexibility: 1.0,
+};
+
+/**
+ * True if the profile has the minimum fields required for any TDEE math.
+ * Used by both NutritionTab and MetricsTab to decide whether to show
+ * calorie-derived UI or fall back to an empty state.
+ */
+export function hasBodyMetrics(profile) {
+  return !!(profile && profile.weight && profile.height);
+}
+
+/**
+ * Mifflin–St Jeor BMR in kcal/day. Returns null if profile is missing
+ * required fields. Clamps weight/height to sane upper bounds to prevent
+ * absurd output from unit mismatches.
+ */
+export function computeBMR(profile) {
+  if (!hasBodyMetrics(profile)) return null;
+
+  const weight = Number(profile.weight) || 0;
+  const height = Number(profile.height) || 0;
+  const age    = Number(profile.age)    || 28;
+  const gender = profile.gender || "female";
+
+  const wKg = Math.min(300, profile.weightUnit === "lb" ? weight * 0.453592 : weight);
+  const hCm = Math.min(250, profile.heightUnit === "ft" ? height * 2.54 : height);
+
+  if (gender === "male")   return 10 * wKg + 6.25 * hCm - 5 * age + 5;
+  if (gender === "female") return 10 * wKg + 6.25 * hCm - 5 * age - 161;
+  // Non-binary / unspecified — average of the male/female offsets
+  return 10 * wKg + 6.25 * hCm - 5 * age - 78;
+}
+
+/**
+ * Maintenance energy expenditure (BMR × activity factor). This is the
+ * "calories burned at this activity level" number — use this as the
+ * denominator for energy-balance / deficit math.
+ *
+ * Returns null if profile incomplete.
+ */
+export function computeMaintenanceTDEE(profile) {
+  const bmr = computeBMR(profile);
+  if (bmr == null) return null;
+  const factor = ACTIVITY_FACTORS[profile?.activityLevel] || 1.55;
+  return Math.max(1200, Math.round(bmr * factor));
+}
+
+/**
+ * Daily target calories = maintenance × goal adjustment (fat_loss = 0.80,
+ * strength = 1.10, etc.). Use this for NutritionTab's "Target" label.
+ *
+ * Returns null if profile incomplete.
+ */
+export function computeTargetCalories(profile) {
+  const maint = computeMaintenanceTDEE(profile);
+  if (maint == null) return null;
+  const goalAdj = GOAL_ADJUSTMENTS[profile?.goal] || 1.0;
+  return Math.max(1200, Math.round(maint * goalAdj));
+}
