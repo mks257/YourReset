@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from "react";
 import * as Storage from "./storage";
 import { getCycleState, buildPhaseNote } from "./cycleEngine";
-import { WEEK_PLAN, HEALTH_SNAPSHOT, SWAP_LIBRARY, SWAP_LIBRARY_BANDS } from "./workoutData";
+import { WEEK_PLAN, SWAP_LIBRARY, SWAP_LIBRARY_BANDS } from "./workoutData";
 import { getExerciseDB, isDBReady } from "./exerciseLibrary";
 import Onboarding from "./Onboarding";
 import PlanTab from "./components/PlanTab";
@@ -15,6 +15,8 @@ import BackgroundAtmosphere from "./components/BackgroundAtmosphere";
 import FriendsTab from "./components/FriendsTab";
 import { useTweaks } from "./components/MotionHooks";
 import * as Notifications from "./notificationService";
+import * as HealthService from "./healthService";
+import { useLiveHealth } from "./hooks/useLiveHealth";
 
 const TWEAK_DEFAULTS = {
   direction: "editorial",
@@ -135,7 +137,10 @@ export default function App() {
   const [done, setDone]       = useState(() => Storage.get(`done_${weekKey}`, {}));
   const [swapped, setSwapped] = useState(() => Storage.get(`swaps_${weekKey}`, {}));
   const [modal, setModal]     = useState(null);
-  const [liveData, setLiveData] = useState(HEALTH_SNAPSHOT);
+  // Live health data comes from Apple Health if the user has enabled sync
+  // in Settings. Otherwise it's null and downstream components render an
+  // empty-state ("—" / "Connect Apple Health" CTA) rather than fake data.
+  const { data: liveData, refresh: refreshHealth, clear: clearHealth } = useLiveHealth();
   const [readiness, setReadiness]           = useState(() => Storage.get(`readiness_${Storage.getTodayKey()}`, null));
   const [showReadiness, setShowReadiness]   = useState(false);
   const [dbReady, setDbReady] = useState(false);
@@ -162,12 +167,9 @@ export default function App() {
   useEffect(() => { Storage.set(`swaps_${weekKey}`, swapped); }, [swapped, weekKey]);
   useEffect(() => { if (readiness) Storage.set(`readiness_${Storage.getTodayKey()}`, readiness); }, [readiness]);
 
-  useEffect(() => {
-    const id = setInterval(() => {
-      setLiveData(p => ({ ...p, steps: p.steps + Math.floor(Math.random() * 55), kcal: p.kcal + Math.floor(Math.random() * 7) }));
-    }, 30000);
-    return () => clearInterval(id);
-  }, []);
+  // Removed: fake setInterval that incremented steps by Math.random() * 55
+  // every 30s. Live data now comes from useLiveHealth() above, which reads
+  // Apple HealthKit on iOS and refreshes when the app returns to foreground.
 
   useEffect(() => {
     if (isDBReady()) { setDbReady(true); return; }
@@ -310,7 +312,7 @@ export default function App() {
         />
       )}
       {tab === "progress" && (
-        <MetricsTab liveData={liveData} motion={tweaks.motion} />
+        <MetricsTab liveData={liveData} profile={profile} motion={tweaks.motion} />
       )}
       {tab === "cycle" && profile?.cycleTracking && (
         <CycleTab
@@ -330,7 +332,7 @@ export default function App() {
         <GutResetTab profile={profile} cycleState={cycleState} motion={tweaks.motion} />
       )}
       {tab === "friends" && (
-        <FriendsTab mySteps={liveData.steps} myName={profile?.name || "You"} />
+        <FriendsTab mySteps={liveData?.steps ?? 0} myName={profile?.name || "You"} />
       )}
       {tab === "you" && (
         <SettingsPage
@@ -350,12 +352,24 @@ export default function App() {
             Notifications.cancelDailyWorkoutReminder();
             Notifications.cancelCyclePhaseAlerts();
             setNotificationPrefsState(Storage.getNotificationPrefs());
+            // Wipe cached HealthKit snapshot + reset useLiveHealth's
+            // in-memory state so MetricsTab shows empty after reset.
+            clearHealth();
             setProfile(null);
             setDone({});
             setSwapped({});
             setReadiness(null);
             setShowReadiness(false);
             setTab("today");
+          }}
+          onHealthSyncChange={(enabled) => {
+            // SettingsPage already persisted the flag; here we react to it.
+            // Enable → fetch fresh metrics immediately so MetricsTab + the
+            // friends leaderboard reflect real data.
+            // Disable → wipe the cached snapshot so the UI shows empty
+            // states rather than stale numbers.
+            if (enabled) refreshHealth();
+            else clearHealth();
           }}
         />
       )}

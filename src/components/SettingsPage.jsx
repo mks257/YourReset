@@ -1,10 +1,11 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import * as Storage from "../storage";
 import { Filesystem, Directory, Encoding } from "@capacitor/filesystem";
 import { Share } from "@capacitor/share";
 import { Capacitor } from "@capacitor/core";
 import { Browser } from "@capacitor/browser";
 import DeleteAccountSheet from "./DeleteAccountSheet";
+import * as HealthService from "../healthService";
 
 // External URLs. Replace with real hosting when ready. The Manage Subscription
 // link uses the itms-apps scheme on iOS which opens the Subscriptions screen
@@ -53,7 +54,56 @@ export default function SettingsPage({
   profile, onSave, onClearAll,
   theme, onSetTheme,
   notificationPrefs, onSetNotificationPrefs,
+  onHealthSyncChange,
 }) {
+  // ── Apple Health sync state (HealthKit) ────────────────────────────────
+  const [healthSync, setHealthSync] = useState(() => Storage.isHealthSyncEnabled());
+  const [healthStatusText, setHealthStatusText] = useState("");
+
+  useEffect(() => {
+    async function checkStatus() {
+      if (!HealthService.isPluginAvailable()) {
+        setHealthStatusText("Web Simulator");
+        return;
+      }
+      if (Storage.isHealthSyncEnabled()) {
+        const authed = await HealthService.checkAuthorization();
+        setHealthStatusText(authed ? "Connected" : "Not Authorized");
+      } else {
+        setHealthStatusText("Not Connected");
+      }
+    }
+    checkStatus();
+  }, [healthSync]);
+
+  const handleHealthSyncToggle = async () => {
+    if (healthSync) {
+      Storage.setHealthSyncEnabled(false);
+      Storage.setCachedHealthSnapshot(null);
+      setHealthSync(false);
+      setHealthStatusText("Not Connected");
+      if (onHealthSyncChange) onHealthSyncChange(false);
+    } else {
+      if (!HealthService.isPluginAvailable()) {
+        Storage.setHealthSyncEnabled(true);
+        setHealthSync(true);
+        setHealthStatusText("Web Simulator");
+        if (onHealthSyncChange) onHealthSyncChange(true);
+        return;
+      }
+      const success = await HealthService.requestAuthorization();
+      if (success) {
+        Storage.setHealthSyncEnabled(true);
+        setHealthSync(true);
+        const authed = await HealthService.checkAuthorization();
+        setHealthStatusText(authed ? "Connected" : "Not Authorized");
+        if (onHealthSyncChange) onHealthSyncChange(true);
+      } else {
+        alert("Failed to request Apple Health authorization. Please check system permissions.");
+      }
+    }
+  };
+
   // Existing fields
   const [name,      setName]      = useState(profile.name || "");
   const [goal,      setGoal]      = useState(profile.goal || "fat_loss");
@@ -501,6 +551,13 @@ export default function SettingsPage({
 
         {/* Action rows — iOS-style list, full-width tappable rows */}
         <div className="yr-settings-rows">
+          <SettingsToggleRow
+            label="Apple Health Sync"
+            helper="Sync steps, calories, weight, and resting heart rate dynamically from Apple Health."
+            checked={healthSync}
+            onToggle={handleHealthSyncToggle}
+            statusText={healthStatusText}
+          />
           <SettingsRow
             label="Privacy Policy"
             helper="How your data is handled"
@@ -594,3 +651,61 @@ function SettingsRow({ label, helper, trailing, onTap, destructive = false }) {
     </button>
   );
 }
+
+/**
+ * iOS-style settings row with a toggle switch.
+ */
+function SettingsToggleRow({ label, helper, checked, onToggle, statusText }) {
+  return (
+    <div
+      style={{
+        display: "flex", alignItems: "center", gap: 12,
+        width: "100%", padding: "14px 16px",
+        background: "var(--yr-surface)",
+        border: "1px solid var(--yr-border)",
+        borderRadius: 14,
+        marginBottom: 8,
+        minHeight: 56,
+      }}
+    >
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{
+          display: "flex", alignItems: "center", gap: 8,
+          fontSize: 14, fontWeight: 500,
+          color: "var(--yr-text)",
+        }}>
+          {label}
+          {statusText && (
+            <span style={{
+              fontSize: 10,
+              fontFamily: "var(--font-mono)",
+              background: statusText === "Connected" ? "rgba(155, 216, 180, 0.15)" : "var(--yr-surface-2)",
+              color: statusText === "Connected" ? "var(--phase-accent)" : "var(--yr-muted)",
+              padding: "2px 6px",
+              borderRadius: 4,
+              textTransform: "uppercase",
+              letterSpacing: "0.05em",
+            }}>
+              {statusText}
+            </span>
+          )}
+        </div>
+        {helper && (
+          <div style={{
+            fontSize: 11, color: "var(--yr-muted)",
+            marginTop: 4,
+            lineHeight: 1.4
+          }}>{helper}</div>
+        )}
+      </div>
+      <button onClick={onToggle} style={{
+        width: 52, height: 30, borderRadius: 999, border: "1px solid var(--yr-border)",
+        background: checked ? "var(--phase-accent)" : "var(--yr-surface-2)", position: "relative", cursor: "pointer",
+        flexShrink: 0, padding: 0, outline: "none",
+      }}>
+        <div style={{ position: "absolute", top: 3, left: checked ? 25 : 3, width: 22, height: 22, borderRadius: "50%", background: "#fff", transition: "left 0.18s" }} />
+      </button>
+    </div>
+  );
+}
+

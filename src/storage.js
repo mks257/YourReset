@@ -184,15 +184,11 @@ export const getExerciseHistory = (exerciseId) => {
 };
 
 /**
- * Notification preferences. Stored as a single object so we have one
- * source of truth for the Settings UI + the App.jsx scheduler bootstrap.
+ * Notification preferences. Single object → single source of truth for the
+ * Settings UI + the App.jsx scheduler bootstrap.
  *
- * Shape:
- *   {
- *     workoutReminderEnabled: boolean,
- *     workoutReminderTime:    string,   // "HH:mm" local
- *     cyclePhaseAlertsEnabled: boolean,
- *   }
+ * Shape: { workoutReminderEnabled, workoutReminderTime ("HH:mm" local),
+ *          cyclePhaseAlertsEnabled }
  */
 const DEFAULT_NOTIFICATION_PREFS = {
   workoutReminderEnabled: false,
@@ -205,3 +201,13 @@ export const getNotificationPrefs = () =>
 
 export const setNotificationPrefs = (prefs) =>
   set("notification_prefs", { ...DEFAULT_NOTIFICATION_PREFS, ...prefs });
+
+/**
+ * HealthKit sync state. Tracks user opt-in plus last-known snapshot for
+ * offline display (useLiveHealth hydrates from this at boot).
+ */
+export const isHealthSyncEnabled = () => get('health_sync_enabled', false);
+export const setHealthSyncEnabled = (enabled) => set('health_sync_enabled', enabled);
+
+export const getCachedHealthSnapshot = () => get('cached_health_snapshot', null);
+export const setCachedHealthSnapshot = (snapshot) => set('cached_health_snapshot', snapshot);

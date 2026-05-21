@@ -47,5 +47,9 @@
 	</array>
 	<key>UIViewControllerBasedStatusBarAppearance</key>
 	<true/>
+	<key>NSHealthShareUsageDescription</key>
+	<string>YourReset uses your health data (steps, active energy, resting heart rate, and exercise minutes) to personalize your workout intensity suggestions and keep your wellness metrics up to date.</string>
+	<key>NSHealthUpdateUsageDescription</key>
+	<string>YourReset uses your health data to track and display your daily activity progress.</string>
 </dict>
 </plist>
