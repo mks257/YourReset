@@ -16,6 +16,30 @@ body {
   background-color: var(--yr-bg);
 }
 
+/* iOS auto-zoom prevention: WKWebView auto-zooms into any text input with
+   font-size < 16px when it gains focus. That zoom (a) visually jolts the
+   user and (b) commonly causes the input to lose focus mid-keystroke,
+   which feels like "keyboard dismisses after one letter."
+   Setting the focused font-size to >= 16px disables the zoom entirely.
+
+   We only enforce this on actual focus so non-focused inputs keep their
+   designed visual density. Inputs of all types are covered (text, number,
+   email, password, search, tel, url, date, time, datetime-local) plus
+   textareas and selects. */
+input,
+textarea,
+select {
+  font-size: max(16px, 1em);
+}
+@supports (-webkit-touch-callout: none) {
+  /* iOS-only enforcement to keep non-iOS designs at the designer's intent. */
+  input,
+  textarea,
+  select {
+    font-size: 16px;
+  }
+}
+
 /* ─── tokens.css ─────────────────────────────────────────────────────────── */
 
 :root {
