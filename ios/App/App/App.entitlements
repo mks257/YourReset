@@ -3,14 +3,24 @@
 <plist version="1.0">
 <dict>
 	<!--
-		HealthKit entitlements temporarily disabled so Personal Team
-		(free Apple ID) can sign the build. Restore these two keys when
-		enrolled in the paid Apple Developer Program ($99/year):
+		HealthKit entitlements temporarily disabled so a free Apple ID
+		(Personal Team) can sign the build for on-device testing.
+
+		Personal Teams cannot use HealthKit, Push Notifications, App
+		Groups, or several other capabilities — only the paid Apple
+		Developer Program ($99/year) can.
+
+		To re-enable HealthKit when enrolled in the paid program, restore
+		these two keys (also: in Xcode, open the App target → Signing &
+		Capabilities → +Capability → HealthKit, and tick Background
+		Delivery):
 
 		<key>com.apple.developer.healthkit</key>
 		<true/>
 		<key>com.apple.developer.healthkit.background-delivery</key>
 		<true/>
+
+		See docs/healthkit-setup.md for the full restore checklist.
 	-->
 </dict>
 </plist>
