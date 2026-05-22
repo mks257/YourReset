@@ -173,7 +173,7 @@ export default function PlanTab({
 
       {/* Food Capsule */}
       <div style={{ maxWidth: 600, margin: "0 auto 8px", padding: "0 4px" }}>
-        <FoodCapsuleCard onTap={onGoToFuel} />
+        <FoodCapsuleCard onTap={onGoToFuel} profile={profile} />
       </div>
 
       {/* Journey track */}
