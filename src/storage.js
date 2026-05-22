@@ -211,3 +211,61 @@ export const setHealthSyncEnabled = (enabled) => set('health_sync_enabled', enab
 
 export const getCachedHealthSnapshot = () => get('cached_health_snapshot', null);
 export const setCachedHealthSnapshot = (snapshot) => set('cached_health_snapshot', snapshot);
+
+// ── Workout streak ──────────────────────────────────────────────────────
+// A "workout day" is any day on which the user marked at least one
+// exercise set as done. We store the list of those dates as YYYY-MM-DD
+// strings. The streak is the count of consecutive days ending today
+// (or yesterday if today's not done yet — so the streak doesn't drop
+// at midnight before the user has a chance to work out).
+
+const dayKey = (date) => date.toISOString().slice(0, 10);
+
+export const getWorkoutDates = () => get('workout_dates', []);
+
+/**
+ * Record today as a completed workout day. Idempotent — calling repeatedly
+ * within the same day doesn't duplicate. Caps history at 365 days so the
+ * storage value doesn't grow unboundedly.
+ */
+export const recordWorkoutDay = () => {
+  const today = getTodayKey();
+  const dates = getWorkoutDates();
+  if (dates.includes(today)) return; // already logged today
+  const next = [today, ...dates].slice(0, 365);
+  set('workout_dates', next);
+};
+
+/**
+ * Current streak in days. Walks back from today (or yesterday if today
+ * isn't completed yet) counting consecutive entries in workout_dates.
+ *
+ * Returns 0 if today AND yesterday are both missing — the streak is
+ * "broken" the moment a full calendar day passes without a workout.
+ */
+export const getCurrentStreak = () => {
+  const dates = new Set(getWorkoutDates());
+  if (dates.size === 0) return 0;
+
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const todayStr = dayKey(today);
+  const yesterday = new Date(today);
+  yesterday.setDate(today.getDate() - 1);
+  const yesterdayStr = dayKey(yesterday);
+
+  // Choose anchor: today if logged, else yesterday if logged, else streak is 0.
+  let anchor;
+  if (dates.has(todayStr)) anchor = today;
+  else if (dates.has(yesterdayStr)) anchor = yesterday;
+  else return 0;
+
+  let count = 0;
+  const cursor = new Date(anchor);
+  while (dates.has(dayKey(cursor))) {
+    count++;
+    cursor.setDate(cursor.getDate() - 1);
+    if (count > 365) break; // safety
+  }
+  return count;
+};

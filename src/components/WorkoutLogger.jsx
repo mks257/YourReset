@@ -83,6 +83,9 @@ function WorkoutLogger({ ex, selectedDay, weekKey, dayColor }) {
                 onClick={() => {
                   const wasNotDone = !s.done;
                   update(i, "done", !s.done);
+                  // Record today as a completed-workout day for the
+                  // streak counter (idempotent within the day).
+                  if (wasNotDone) Storage.recordWorkoutDay();
                   // Auto-start the rest timer only on the transition
                   // not-done → done (not when toggling back off), and only
                   // if this isn't the very last set of the exercise.

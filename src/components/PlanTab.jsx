@@ -94,7 +94,30 @@ export default function PlanTab({
     <div>
       {/* HUB */}
       <div className="yr-hub-wrap">
-        <div className="yr-overline" style={{ textAlign:"center" }}>Today's signal</div>
+        <div className="yr-overline" style={{ textAlign:"center", display:"flex", justifyContent:"center", alignItems:"center", gap:10 }}>
+          <span>Today's signal</span>
+          {(() => {
+            const streak = Storage.getCurrentStreak();
+            if (streak < 1) return null;
+            return (
+              <span
+                aria-label={`${streak}-day streak`}
+                style={{
+                  display:"inline-flex", alignItems:"center", gap:4,
+                  padding:"3px 8px", borderRadius:999,
+                  background:"color-mix(in oklch, var(--phase-accent) 18%, transparent)",
+                  border:"1px solid color-mix(in oklch, var(--phase-accent) 35%, transparent)",
+                  color:"var(--phase-accent)",
+                  fontFamily:"var(--font-mono)", fontSize:10, fontWeight:700,
+                  letterSpacing:"0.04em",
+                  textTransform:"none",
+                }}
+              >
+                <span aria-hidden="true">🔥</span>{streak}-day
+              </span>
+            );
+          })()}
+        </div>
         <div className="yr-hub">
           <div className="yr-hub-ring" />
           <div className="yr-hub-ring-2" />
