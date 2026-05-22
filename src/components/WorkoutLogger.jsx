@@ -3,10 +3,17 @@ import * as Storage from "../storage";
 import { getExerciseHistory } from "../storage";
 import { parseSets } from "../cycleEngine";
 import { T } from "../theme";
+import RestTimer from "./RestTimer";
 
 function WorkoutLogger({ ex, selectedDay, weekKey, dayColor }) {
   const logKey  = `log_${weekKey}_${selectedDay}_${ex.id}`;
   const numSets = parseSets(ex.sets) || 3;
+
+  // Rest timer state — bumped each time a set is marked done so the timer
+  // remounts with a fresh countdown. null when no timer is showing.
+  // The shared restTimerKey forces React to give us a new RestTimer
+  // instance (and therefore a fresh 90s countdown) for each new set.
+  const [restTimerKey, setRestTimerKey] = useState(null);
 
   const fullHistory = useMemo(() => getExerciseHistory(ex.id), [ex.id]);
   const prevLog = fullHistory[fullHistory.length - 1]?.data;
@@ -73,7 +80,16 @@ function WorkoutLogger({ ex, selectedDay, weekKey, dayColor }) {
                 visible 24px inner circle, matching iOS HIG (44pt minimum). */}
             <div style={{ display: "grid", gridTemplateColumns: "44px 1fr 1fr", gap: 6, alignItems: "center" }}>
               <button
-                onClick={() => update(i, "done", !s.done)}
+                onClick={() => {
+                  const wasNotDone = !s.done;
+                  update(i, "done", !s.done);
+                  // Auto-start the rest timer only on the transition
+                  // not-done → done (not when toggling back off), and only
+                  // if this isn't the very last set of the exercise.
+                  if (wasNotDone && i < sets.length - 1) {
+                    setRestTimerKey(Date.now());
+                  }
+                }}
                 aria-label={s.done ? `Mark set ${i + 1} not done` : `Mark set ${i + 1} done`}
                 aria-pressed={s.done}
                 style={{
@@ -184,6 +200,17 @@ function WorkoutLogger({ ex, selectedDay, weekKey, dayColor }) {
       <div style={{ fontSize: "0.6rem", color: T.muted, marginTop: 4 }}>
         RPE 5 = easy · 7 = challenging · 10 = max · Saved automatically
       </div>
+
+      {/* Rest timer — auto-mounts after marking a set done (except last).
+          key change forces a fresh 90s countdown each time. */}
+      {restTimerKey && (
+        <RestTimer
+          key={restTimerKey}
+          defaultSeconds={90}
+          onComplete={() => setRestTimerKey(null)}
+          onSkip={() => setRestTimerKey(null)}
+        />
+      )}
     </div>
   );
 }
