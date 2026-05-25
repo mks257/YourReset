@@ -1,6 +1,12 @@
 /* YourReset — combined design tokens, layout, directions, and motion */
 
-@import url('https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700;800;900&family=Geist+Mono:wght@400;500;600&family=Fraunces:opsz,wght@9..144,300;9..144,400;9..144,500;9..144,600;9..144,700&display=swap');
+/* Pacific Deep editorial type stack:
+   - Playfair Display: display headlines (the editorial "moments")
+   - Source Sans 3: body, labels, all functional UI
+   Kept Geist Mono for tabular numerics (timers, kcal, day counters).
+   Fraunces is still loaded so any in-flight italic display text continues
+   to render until the per-screen redesigns land in later phases. */
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400..900;1,400..900&family=Source+Sans+3:ital,wght@0,300..900;1,300..900&family=Geist+Mono:wght@400;500;600&family=Fraunces:opsz,wght@9..144,300..700&display=swap');
 
 /* iOS safe area + WebKit niceties */
 html, body {
@@ -43,45 +49,65 @@ select {
 /* ─── tokens.css ─────────────────────────────────────────────────────────── */
 
 :root {
-  /* Warm dark (default) */
-  --yr-bg: #0e0d10;
-  --yr-bg-elev: #15141a;
-  --yr-surface: rgba(255, 248, 244, 0.04);
-  --yr-surface-2: rgba(255, 248, 244, 0.07);
-  --yr-border: rgba(255, 248, 244, 0.10);
-  --yr-border-strong: rgba(255, 248, 244, 0.18);
-  --yr-text: #f5efe8;
-  --yr-text-2: #c9c2bb;
-  --yr-muted: #8e8780;
-  --yr-faint: #5a544e;
+  /* ── Pacific Deep editorial palette ──────────────────────────────────
+     Midnight-blue oceanic foundation. The "True Black" of the Nocturne
+     variant is replaced with a deep blue that pairs with the phase
+     accents and gives a sense of submerged depth.
 
-  /* Phase accents */
-  --phase-menstrual: #d98aa8;
-  --phase-follicular: #9bd8b4;
-  --phase-ovulatory: #f2bd73;
-  --phase-luteal: #b79cff;
-  --phase-other: #8cc8ff;
+     Surface tones are not pure rgba whites anymore — they shift toward
+     the lighter blue range (#2a3546 etc.) so glass-card layers feel
+     like tonal lifts rather than washes of grey. */
+  --yr-bg: #081423;                /* surface — Pacific Deep midnight */
+  --yr-bg-elev: #152030;           /* surface-container */
+  --yr-surface: rgba(215, 227, 249, 0.04);   /* foam-white tint, 4%  */
+  --yr-surface-2: rgba(215, 227, 249, 0.07); /* foam-white tint, 7%  */
+  --yr-border: rgba(215, 227, 249, 0.10);    /* foam-white tint, 10% */
+  --yr-border-strong: rgba(215, 227, 249, 0.20);
+
+  --yr-text: #d7e3f9;              /* on-surface — foam white */
+  --yr-text-2: #c5c6cd;            /* on-surface-variant */
+  --yr-muted: #8f9097;             /* outline / muted */
+  --yr-faint: #515f78;             /* outline-variant + inverse-primary */
+
+  /* Pacific Deep secondary teal — used by some neutral UI accents
+     when phase context isn't appropriate (e.g. info chips, link blue) */
+  --yr-info: #9acee1;
+
+  /* ── Phase accents (preserved) ───────────────────────────────────────
+     The cycle phase is the product's core signal — the design system
+     calls these out as "functional signifiers." Renamed slightly to
+     match the Nocturne/Pacific Deep design doc vocabulary (Sage, Coral,
+     Rose Dust, Clay) but the existing 5 phase pattern is retained. */
+  --phase-menstrual: #d98aa8;      /* Rose Dust (kept) */
+  --phase-follicular: #9bd8b4;     /* Sage (kept) */
+  --phase-ovulatory: #f2bd73;      /* Coral / amber (kept) */
+  --phase-luteal: #b79cff;         /* Soft violet (kept) */
+  --phase-other: #9acee1;          /* Teal (was sky blue) — matches the
+                                      Pacific Deep secondary teal */
   --phase-accent: var(--phase-follicular);
   --phase-soft: color-mix(in oklch, var(--phase-accent) 14%, transparent);
 
-  /* Type scale */
-  --font-display: 'Geist', -apple-system, system-ui, sans-serif;
-  --font-body: 'Geist', -apple-system, system-ui, sans-serif;
+  /* ── Type scale ───────────────────────────────────────────────────── */
+  --font-display: 'Playfair Display', Georgia, 'Times New Roman', serif;
+  --font-body: 'Source Sans 3', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
   --font-mono: 'Geist Mono', ui-monospace, monospace;
-  --font-serif: 'Fraunces', Georgia, serif;
+  --font-serif: 'Playfair Display', Georgia, serif; /* alias for legacy refs */
 }
 
 [data-theme="light"] {
-  --yr-bg: #f5f1ec;
-  --yr-bg-elev: #fbf8f3;
-  --yr-surface: rgba(20, 18, 16, 0.03);
-  --yr-surface-2: rgba(20, 18, 16, 0.06);
-  --yr-border: rgba(20, 18, 16, 0.10);
-  --yr-border-strong: rgba(20, 18, 16, 0.18);
-  --yr-text: #1a1916;
-  --yr-text-2: #3d3a36;
-  --yr-muted: #6e6a64;
-  --yr-faint: #a09a92;
+  /* Pacific Deep light: cool foam-white with deep blue text.
+     Mirrors the dark theme's relationship between bg and text without
+     introducing warmth, so the editorial palette stays coherent. */
+  --yr-bg: #f4f7fb;                /* foam white */
+  --yr-bg-elev: #ffffff;
+  --yr-surface: rgba(8, 20, 35, 0.03);
+  --yr-surface-2: rgba(8, 20, 35, 0.06);
+  --yr-border: rgba(8, 20, 35, 0.10);
+  --yr-border-strong: rgba(8, 20, 35, 0.18);
+  --yr-text: #081423;              /* midnight blue, mirrored */
+  --yr-text-2: #1f2b3b;
+  --yr-muted: #515f78;
+  --yr-faint: #8f9097;
 }
 
 * { box-sizing: border-box; }
