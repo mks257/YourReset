@@ -153,34 +153,171 @@ export default function Onboarding({ onComplete }) {
   );
 
   const STEPS = {
-    // Welcome — name capture. Single field, single primary CTA.
+    // Welcome — Pacific Deep editorial hero: glass orbital ring, Playfair
+    // wordmark, italic tagline, privacy reassurance card, name input + CTA.
     welcome: (
-    <ScreenWrapper
-      key="welcome"
-      title="Welcome to YourReset"
-      subtitle="Workouts and nutrition that adapt to your body."
-      eyebrow="Introduction"
-    >
-      <div style={{ maxWidth: 320, margin: "0 auto", width: "100%" }}>
-        <div className="yr-overline" style={{ marginBottom: 8, textAlign: "left" }}>Your Name</div>
+    <div key="welcome" className="yr-onboarding-screen yr-tab-fade" style={{
+      flex: 1, display: "flex", flexDirection: "column", alignItems: "center",
+      padding: "20px 24px 40px",
+      gap: 28,
+    }}>
+
+      {/* Animated visual anchor — orbital glass ring */}
+      <div style={{
+        position: "relative",
+        width: "min(260px, 60vw)", height: "min(260px, 60vw)",
+        display: "flex", alignItems: "center", justifyContent: "center",
+        marginTop: 24,
+      }}>
+        {/* Outer glass ring */}
+        <div style={{
+          position: "absolute", inset: 0, borderRadius: "50%",
+          border: "1px solid color-mix(in oklch, var(--phase-accent) 18%, transparent)",
+          background: "linear-gradient(135deg, color-mix(in oklch, var(--phase-accent) 8%, transparent), transparent 60%)",
+          backdropFilter: "blur(8px)", WebkitBackdropFilter: "blur(8px)",
+        }} />
+        {/* Inner glow */}
+        <div style={{
+          position: "absolute",
+          width: "60%", height: "60%", borderRadius: "50%",
+          background: "color-mix(in oklch, var(--phase-accent) 18%, transparent)",
+          filter: "blur(40px)",
+        }} />
+        {/* Centerpiece — Playfair Y mark */}
+        <div style={{
+          position: "relative", zIndex: 1,
+          width: "50%", height: "50%", borderRadius: "50%",
+          background: "color-mix(in oklch, var(--phase-accent) 12%, var(--yr-bg))",
+          border: "1px solid color-mix(in oklch, var(--phase-accent) 24%, transparent)",
+          display: "flex", alignItems: "center", justifyContent: "center",
+          fontFamily: "var(--font-display)",
+          fontSize: "clamp(48px, 18vw, 80px)",
+          color: "var(--phase-accent)",
+          letterSpacing: "-0.04em",
+          lineHeight: 1,
+        }}>
+          Y
+        </div>
+      </div>
+
+      {/* Editorial typography section */}
+      <div style={{
+        textAlign: "center", maxWidth: 360, width: "100%",
+        display: "flex", flexDirection: "column", gap: 12,
+      }}>
+        <h1 style={{
+          margin: 0,
+          fontFamily: "var(--font-display)",
+          fontSize: "clamp(40px, 11vw, 56px)",
+          fontWeight: 700, lineHeight: 1.05,
+          color: "var(--yr-text)",
+          letterSpacing: "-0.04em",
+        }}>
+          YourReset
+        </h1>
+        <p style={{
+          margin: 0,
+          fontFamily: "var(--font-display)",
+          fontSize: "clamp(18px, 5vw, 22px)",
+          fontWeight: 400, fontStyle: "italic",
+          color: "var(--phase-accent)",
+          letterSpacing: "-0.01em",
+        }}>
+          Your cycle, your rhythm.
+        </p>
+        <p style={{
+          margin: 0,
+          fontFamily: "var(--font-body)",
+          fontSize: 15, lineHeight: 1.55,
+          color: "var(--yr-text-2)",
+          padding: "0 12px",
+        }}>
+          A restorative companion that aligns your training and nutrition with your unique biological tempo.
+        </p>
+      </div>
+
+      {/* Name input */}
+      <div style={{ width: "100%", maxWidth: 320 }}>
+        <div style={{
+          fontFamily: "var(--font-body)",
+          fontSize: 11, fontWeight: 600,
+          letterSpacing: "0.14em", textTransform: "uppercase",
+          color: "var(--yr-muted)",
+          marginBottom: 8, textAlign: "left",
+        }}>
+          Your name
+        </div>
         <input
-          className="yr-input"
-          style={{ fontSize: 18, padding: "16px 20px", borderRadius: 16 }}
-          placeholder="How should we call you?"
           value={name}
           onChange={e => setName(e.target.value)}
-          // No autoFocus: iOS HIG discourages auto-showing the keyboard
-          // on first render — let the user see the welcome message first.
+          placeholder="How should we call you?"
+          style={{
+            width: "100%",
+            padding: "14px 18px",
+            fontSize: 16,  // ≥16 to skip iOS auto-zoom
+            fontFamily: "var(--font-body)",
+            borderRadius: 14,
+            border: "1px solid var(--yr-border)",
+            background: "var(--yr-surface)",
+            color: "var(--yr-text)",
+            outline: "none",
+            boxSizing: "border-box",
+            minHeight: 48,
+          }}
         />
-        <button
-          className="yr-hub-cta"
-          style={{ width: "100%", marginTop: 24, padding: 16, fontSize: 15 }}
-          onClick={goNext}
-        >
-          Begin
-        </button>
       </div>
-    </ScreenWrapper>
+
+      {/* Primary CTA */}
+      <button
+        onClick={goNext}
+        style={{
+          width: "100%", maxWidth: 320,
+          minHeight: 48,
+          padding: "14px 24px",
+          background: "var(--phase-accent)",
+          color: "var(--yr-bg)",
+          border: "none",
+          borderRadius: 14,
+          fontFamily: "var(--font-body)",
+          fontSize: 15, fontWeight: 700,
+          letterSpacing: "0.02em",
+          cursor: "pointer",
+          boxShadow: "0 8px 32px color-mix(in oklch, var(--phase-accent) 20%, transparent)",
+        }}
+      >
+        Get Started
+      </button>
+
+      {/* Privacy reassurance card */}
+      <div style={{
+        display: "flex", alignItems: "center", gap: 12,
+        padding: "12px 16px",
+        background: "color-mix(in oklch, var(--yr-bg-elev) 60%, transparent)",
+        backdropFilter: "blur(12px)", WebkitBackdropFilter: "blur(12px)",
+        border: "1px solid var(--yr-border)",
+        borderRadius: 14,
+        maxWidth: 320, width: "100%",
+      }}>
+        <span style={{ fontSize: 18, color: "var(--phase-accent)" }} aria-hidden="true">🛡</span>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{
+            fontFamily: "var(--font-body)",
+            fontSize: 13, fontWeight: 600,
+            color: "var(--yr-text)",
+          }}>
+            Your data stays on device
+          </div>
+          <div style={{
+            fontFamily: "var(--font-body)",
+            fontSize: 11,
+            color: "var(--yr-muted)",
+            marginTop: 1,
+          }}>
+            No cloud sync. Total privacy by design.
+          </div>
+        </div>
+      </div>
+    </div>
     ),
 
     // Goal — primary intent. Used to tailor the plan and adjust calorie target.

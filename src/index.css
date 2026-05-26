@@ -262,29 +262,29 @@ button:focus-visible { outline: 2px solid var(--phase-accent); outline-offset: 2
   transition: background 0.18s ease, color 0.18s ease;
 }
 .yr-mnav-icon {
-  /* Emoji glyph — size is the iOS tab-bar icon size (~24pt) */
-  font-size: 20px;
+  /* SVG icons — color inherits from currentColor on the button.
+     Line variant when inactive, filled when active (handled by TabIcon
+     filled prop, not CSS). The svg child is sized 22px in markup. */
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   line-height: 1;
-  filter: grayscale(1) opacity(0.65);
-  transition: filter 0.18s ease;
 }
 .yr-mnav-label {
+  font-family: var(--font-body);
   font-size: 10px;
-  font-weight: 500;
-  letter-spacing: 0.02em;
+  font-weight: 600;
+  letter-spacing: 0.04em;
 }
 .yr-mnav-btn.active {
-  background: var(--phase-soft);
+  /* Filled icon + accent color — no background pill (matches Stitch) */
   color: var(--phase-accent);
-}
-.yr-mnav-btn.active .yr-mnav-icon {
-  /* Restore color on active tab so the emoji "pops" */
-  filter: none;
 }
 /* Suppress sticky :hover on touch devices */
 @media (hover: hover) {
-  .yr-mnav-btn:hover:not(.active) { color: var(--yr-text); }
-  .yr-mnav-btn:hover .yr-mnav-icon { filter: grayscale(0.4) opacity(0.85); }
+  .yr-mnav-btn:hover:not(.active) {
+    color: color-mix(in oklch, var(--yr-text) 80%, transparent);
+  }
 }
 
 /* === HUB (Today) === */

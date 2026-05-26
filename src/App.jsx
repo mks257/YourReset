@@ -13,6 +13,7 @@ import SettingsPage from "./components/SettingsPage";
 import ExerciseModal from "./components/ExerciseModal";
 import BackgroundAtmosphere from "./components/BackgroundAtmosphere";
 import FriendsTab from "./components/FriendsTab";
+import BrandLogo from "./components/BrandLogo";
 import { useTweaks } from "./components/MotionHooks";
 import * as Notifications from "./notificationService";
 import * as HealthService from "./healthService";
@@ -41,14 +42,77 @@ const PHASE_ACCENT_MAP = {
 // bottom nav. Progress is hidden until HealthKit lands (data is currently
 // fake). Friends is hidden until a real social/sync layer exists. Both can
 // be restored by flipping primary to true.
+// Tabs use inline SVG icons (line for inactive, filled for active) — replaces
+// emoji icons for a cleaner Pacific Deep aesthetic. Material Symbols would
+// add an extra font load; SVG keeps the icon system in our control.
+function TabIcon({ id, filled }) {
+  // Stroke-only icons that fill on active. 24×24 viewbox.
+  const stroke = "currentColor";
+  const sw = filled ? 0 : 1.6;
+  const fill = filled ? "currentColor" : "none";
+  switch (id) {
+    case "today":
+      return (
+        <svg width="22" height="22" viewBox="0 0 24 24" fill={fill} stroke={stroke} strokeWidth={sw} strokeLinecap="round" strokeLinejoin="round">
+          <rect x="3" y="5" width="18" height="16" rx="2" />
+          <path d="M3 9h18" stroke={filled ? "var(--yr-bg)" : stroke} strokeWidth={1.6} />
+          <path d="M8 3v4M16 3v4" stroke={filled ? "var(--yr-bg)" : stroke} strokeWidth={1.6} />
+        </svg>
+      );
+    case "cycle":
+      return (
+        <svg width="22" height="22" viewBox="0 0 24 24" fill={fill} stroke={stroke} strokeWidth={sw} strokeLinecap="round" strokeLinejoin="round">
+          <circle cx="12" cy="12" r="8" />
+          <path d="M12 4 v2 M12 18 v2 M4 12 h2 M18 12 h2" stroke={filled ? "var(--yr-bg)" : stroke} strokeWidth={1.6} />
+        </svg>
+      );
+    case "fuel":
+      return (
+        <svg width="22" height="22" viewBox="0 0 24 24" fill={fill} stroke={stroke} strokeWidth={sw} strokeLinecap="round" strokeLinejoin="round">
+          <path d="M6 3v18 M18 3v18" />
+          <path d="M6 12 c4 0 8 0 12 0" />
+        </svg>
+      );
+    case "gut":
+      return (
+        <svg width="22" height="22" viewBox="0 0 24 24" fill={fill} stroke={stroke} strokeWidth={sw} strokeLinecap="round" strokeLinejoin="round">
+          <path d="M12 21 s-7-5-7-11 a4 4 0 0 1 7-2.5 a4 4 0 0 1 7 2.5 c0 6-7 11-7 11z" />
+        </svg>
+      );
+    case "you":
+      return (
+        <svg width="22" height="22" viewBox="0 0 24 24" fill={fill} stroke={stroke} strokeWidth={sw} strokeLinecap="round" strokeLinejoin="round">
+          <circle cx="12" cy="9" r="3.5" />
+          <path d="M5 20 c0-4 3-6 7-6 s7 2 7 6" />
+        </svg>
+      );
+    case "progress":
+      return (
+        <svg width="22" height="22" viewBox="0 0 24 24" fill={fill} stroke={stroke} strokeWidth={sw} strokeLinecap="round" strokeLinejoin="round">
+          <path d="M4 20 V8 M10 20 V12 M16 20 V4 M22 20 H2" />
+        </svg>
+      );
+    case "friends":
+      return (
+        <svg width="22" height="22" viewBox="0 0 24 24" fill={fill} stroke={stroke} strokeWidth={sw} strokeLinecap="round" strokeLinejoin="round">
+          <circle cx="9" cy="9" r="3" />
+          <circle cx="17" cy="11" r="2.5" />
+          <path d="M3 19 c0-3 3-5 6-5 s6 2 6 5 M21 19 c0-2.5-2-4-4-4" />
+        </svg>
+      );
+    default:
+      return null;
+  }
+}
+
 const TABS = [
-  { id:"today",    icon:"☀️", label:"Today",    primary:true  },
-  { id:"cycle",    icon:"🌙", label:"Cycle",    primary:true  },
-  { id:"fuel",     icon:"🥗", label:"Fuel",     primary:true  },
-  { id:"gut",      icon:"🫐", label:"Gut",      primary:true  },
-  { id:"you",      icon:"👤", label:"You",      primary:true  },
-  { id:"progress", icon:"📊", label:"Progress", primary:false },
-  { id:"friends",  icon:"👥", label:"Friends",  primary:false },
+  { id:"today",    label:"Today",    primary:true  },
+  { id:"cycle",    label:"Cycle",    primary:true  },
+  { id:"fuel",     label:"Fuel",     primary:true  },
+  { id:"gut",      label:"Gut",      primary:true  },
+  { id:"you",      label:"You",      primary:true  },
+  { id:"progress", label:"Progress", primary:false },
+  { id:"friends",  label:"Friends",  primary:false },
 ];
 
 // ── Tweaks panel ─────────────────────────────────────────────────────────
@@ -273,11 +337,8 @@ export default function App() {
       {/* Header — brand only. Theme toggle moved to Settings; desktop tab bar
           removed (mobile-first design with bottom nav). */}
       <header className="yr-header">
-        <div className="yr-header-inner">
-          <div className="yr-brand">
-            <div className="yr-brand-mark">YR</div>
-            <div className="yr-brand-name"><b>{profile?.name || "YourReset"}</b>{profile ? <span>'s Reset</span> : null}</div>
-          </div>
+        <div className="yr-header-inner" style={{ justifyContent: "flex-start", gap: 0 }}>
+          <BrandLogo size={26} showWordmark />
         </div>
       </header>
 
@@ -380,18 +441,23 @@ export default function App() {
 
       {/* Mobile bottom nav — primary tabs only, icon above label (iOS pattern). */}
       <nav className="yr-mobile-nav" aria-label="Primary">
-        {bottomNavTabs.map(t => (
-          <button
-            key={t.id}
-            className={`yr-mnav-btn${tab === t.id ? " active" : ""}`}
-            onClick={() => setTab(t.id)}
-            aria-label={t.label}
-            aria-current={tab === t.id ? "page" : undefined}
-          >
-            <span className="yr-mnav-icon" aria-hidden="true">{t.icon}</span>
-            <span className="yr-mnav-label">{t.label}</span>
-          </button>
-        ))}
+        {bottomNavTabs.map(t => {
+          const isActive = tab === t.id;
+          return (
+            <button
+              key={t.id}
+              className={`yr-mnav-btn${isActive ? " active" : ""}`}
+              onClick={() => setTab(t.id)}
+              aria-label={t.label}
+              aria-current={isActive ? "page" : undefined}
+            >
+              <span className="yr-mnav-icon" aria-hidden="true">
+                <TabIcon id={t.id} filled={isActive} />
+              </span>
+              <span className="yr-mnav-label">{t.label}</span>
+            </button>
+          );
+        })}
       </nav>
 
       {/* Tweaks panel: development only. Vite tree-shakes this out of
